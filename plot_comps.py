@@ -32,7 +32,7 @@ def create_bus_map(csv_file: str, geojson_file: str, output_file: str = "bus_map
 
     # --- Farben pro Carrier definieren ---
     carriers = gdf_buses['carrier'].unique()
-    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue"]
+    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
     carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
 
     # --- Marker hinzufügen ---
@@ -43,7 +43,7 @@ def create_bus_map(csv_file: str, geojson_file: str, output_file: str = "bus_map
 
         folium.CircleMarker(
             location=[row.geometry.y, row.geometry.x],
-            radius=3,
+            radius=7,
             color=color,
             fill=True,
             fill_color=color,
@@ -97,7 +97,7 @@ def create_links_map(buses_csv: str, links_csv: str, geojson_file: str, output_f
 
     # Farben pro Carrier zuweisen
     carriers = gdf_buses['carrier'].unique()
-    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue"]
+    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
     carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
 
     # Interaktive Karte erstellen
@@ -123,7 +123,7 @@ def create_links_map(buses_csv: str, links_csv: str, geojson_file: str, output_f
             line = folium.PolyLine(
                 locations=[[point0.y, point0.x], [point1.y, point1.x]],
                 color=color,
-                weight=2,
+                weight=3,
                 opacity=0.8,
                 tooltip=f"{row['bus0']} → {row['bus1']} ({carrier})"
             )
