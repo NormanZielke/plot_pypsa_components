@@ -13,6 +13,13 @@ geojson_file = "germany-de-nuts-3-regions.geojson"
 cities = ["Ingolstadt"]
 #cities = ["network"]
 
+# plot settings
+
+args = {"bussize": 10,
+        "linkwidth": 5,
+        "linewidth": 3
+        }
+
 for city in cities:
     print(f"➤ Erzeuge Karten für: {city}")
     # Eingabepfade
@@ -31,14 +38,34 @@ for city in cities:
     output_file_buses_links_lines = f"maps/Simulation_{city}/buses_links_lines_map_{city}.html"
 
     # create maps
-    create_bus_map(buses, geojson_file, output_file_buses)
+    create_bus_map(buses_csv = buses,
+                   geojson_file = geojson_file,
+                   output_file = output_file_buses,
+                   args = args)
 
-    create_links_map(buses, links, geojson_file, output_file_links)
+    create_links_map(buses_csv = buses,
+                     links_csv = links,
+                     geojson_file = geojson_file,
+                     output_file = output_file_links,
+                     args = args)
 
-    create_lines_map(buses, lines, geojson_file, output_file_lines)
+    create_lines_map(buses_csv = buses,
+                     lines_csv = lines,
+                     geojson_file = geojson_file,
+                     output_file = output_file_lines,
+                     args = args)
 
-    create_buses_and_links_map(buses, links, geojson_file, output_file_buses_and_links)
+    create_buses_and_links_map(buses_csv = buses,
+                               links_csv = links,
+                               geojson_file = geojson_file,
+                               output_file = output_file_buses_and_links,
+                               args = args)
 
-    create_buses_links_lines_map(buses, links, lines, geojson_file, output_file_buses_links_lines)
+    create_buses_links_lines_map(buses_csv = buses,
+                                 links_csv = links,
+                                 lines_csv = lines,
+                                 geojson_file = geojson_file,
+                                 output_file = output_file_buses_links_lines,
+                                 args = args)
 
 print("✅ Alle Karten wurden erstellt.")
