@@ -3,13 +3,16 @@ from plot_comps import (
     create_links_map,
     create_lines_map,
     create_buses_and_links_map,
+    create_buses_links_lines_map
 )
 
 # path input_data
 geojson_file = "germany-de-nuts-3-regions.geojson"
+
 #cities = ["Ingolstadt", "Kassel", "Bocholt"]
 cities = ["Ingolstadt"]
 #cities = ["network"]
+
 for city in cities:
     print(f"➤ Erzeuge Karten für: {city}")
     # Eingabepfade
@@ -24,7 +27,8 @@ for city in cities:
     output_file_buses = f"maps/Simulation_{city}/bus_map_{city}.html"
     output_file_links = f"maps/Simulation_{city}/links_map_{city}.html"
     output_file_lines = f"maps/Simulation_{city}/lines_map_{city}.html"
-    output_file_links_and_buses = f"maps/Simulation_{city}/links_and_buses_map_{city}.html"
+    output_file_buses_and_links = f"maps/Simulation_{city}/buses_and_links_map_{city}.html"
+    output_file_buses_links_lines = f"maps/Simulation_{city}/buses_links_lines_map_{city}.html"
 
     # create maps
     create_bus_map(buses, geojson_file, output_file_buses)
@@ -33,6 +37,8 @@ for city in cities:
 
     create_lines_map(buses, lines, geojson_file, output_file_lines)
 
-    create_buses_and_links_map(buses, links, geojson_file, output_file_links_and_buses)
+    create_buses_and_links_map(buses, links, geojson_file, output_file_buses_and_links)
+
+    create_buses_links_lines_map(buses, links, lines, geojson_file, output_file_buses_links_lines)
 
 print("✅ Alle Karten wurden erstellt.")
