@@ -1,71 +1,51 @@
+import os
+import pypsa
+
 from plot_comps import (
     create_bus_map,
     create_links_map,
     create_lines_map,
     create_buses_and_links_map,
-    create_buses_links_lines_map
+    create_buses_links_lines_map,
 )
 
-# path input_data
-geojson_file = "germany-de-nuts-3-regions.geojson"
+args = {
+    # INPUT
+    "pypsa_network":"pypsa_results/results_ingolstadt", # path to pypsa results
+    "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts 3 file
+    # Visualisation
+    "plot_settings":{
+            "bussize": 10,
+            "linkwidth": 5,
+            "linewidth": 3,
+    },
+    # maps_export
+    "maps_export":{ # save maps as .html /path/to/folder/bus_map_xxx.html
+        "busmap":"maps/results_Ingolstadt/bus_map_Ingolstadt.html",
+        "links" :"maps/results_Ingolstadt/links_map_Ingolstadt.html",
+        "lines" :"maps/results_Ingolstadt/lines_map_Ingolstadt.html",
+        "buses_links" : "maps/results_Ingolstadt/buses_links_map_Ingolstadt.html",
+        "buses_links_lines" : "maps/results_Ingolstadt/buses_links_lines_map_Ingolstadt.html",
+    },
+}
 
-#cities = ["Ingolstadt", "Kassel", "Bocholt"]
-cities = ["Ingolstadt"]
-#cities = ["network"]
+# INPUT - DATA
 
-# plot settings
+n = pypsa.Network(args["pypsa_network"])
+n.args = args
 
-args = {"bussize": 10,
-        "linkwidth": 5,
-        "linewidth": 3
-        }
+# create maps
 
-for city in cities:
-    print(f"➤ Erzeuge Karten für: {city}")
-    # Eingabepfade
-    #base_path = "csv/network"
+create_bus_map(n)
 
-    base_path = f"csv/Simulation_{city}"
-    buses = f"{base_path}/buses.csv"
-    links = f"{base_path}/links.csv"
-    lines = f"{base_path}/lines.csv"
+create_links_map(n)
 
-    # Ausgabepfade
-    output_file_buses = f"maps/Simulation_{city}/bus_map_{city}.html"
-    output_file_links = f"maps/Simulation_{city}/links_map_{city}.html"
-    output_file_lines = f"maps/Simulation_{city}/lines_map_{city}.html"
-    output_file_buses_and_links = f"maps/Simulation_{city}/buses_and_links_map_{city}.html"
-    output_file_buses_links_lines = f"maps/Simulation_{city}/buses_links_lines_map_{city}.html"
+create_lines_map(n)
 
-    # create maps
-    create_bus_map(buses_csv = buses,
-                   geojson_file = geojson_file,
-                   output_file = output_file_buses,
-                   args = args)
+create_buses_and_links_map(n)
 
-    create_links_map(buses_csv = buses,
-                     links_csv = links,
-                     geojson_file = geojson_file,
-                     output_file = output_file_links,
-                     args = args)
+create_buses_links_lines_map(n)
 
-    create_lines_map(buses_csv = buses,
-                     lines_csv = lines,
-                     geojson_file = geojson_file,
-                     output_file = output_file_lines,
-                     args = args)
 
-    create_buses_and_links_map(buses_csv = buses,
-                               links_csv = links,
-                               geojson_file = geojson_file,
-                               output_file = output_file_buses_and_links,
-                               args = args)
 
-    create_buses_links_lines_map(buses_csv = buses,
-                                 links_csv = links,
-                                 lines_csv = lines,
-                                 geojson_file = geojson_file,
-                                 output_file = output_file_buses_links_lines,
-                                 args = args)
 
-print("✅ Alle Karten wurden erstellt.")
