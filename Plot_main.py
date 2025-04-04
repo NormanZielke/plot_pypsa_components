@@ -21,15 +21,15 @@ args = {
     },
     # maps_export
     "maps_export":{ # save maps as .html /path/to/folder/bus_map_xxx.html
-        "busmap":"maps/results_Ingolstadt/bus_map_Ingolstadt.html",
-        "links" :"maps/results_Ingolstadt/links_map_Ingolstadt.html",
-        "lines" :"maps/results_Ingolstadt/lines_map_Ingolstadt.html",
-        "buses_links" : "maps/results_Ingolstadt/buses_links_map_Ingolstadt.html",
-        "buses_links_lines" : "maps/results_Ingolstadt/buses_links_lines_map_Ingolstadt.html",
+        "busmap":"maps/maps_Ingolstadt/bus_map_Ingolstadt.html",
+        "links" :"maps/maps_Ingolstadt/links_map_Ingolstadt.html",
+        "lines" :"maps/maps_Ingolstadt/lines_map_Ingolstadt.html",
+        "buses_links" : "maps/maps_Ingolstadt/buses_links_map_Ingolstadt.html",
+        "buses_links_lines" : "maps/maps_Ingolstadt/buses_links_lines_map_Ingolstadt.html",
     },
 }
 
-# INPUT - DATA
+# Load pypsa-network
 
 n = pypsa.Network(args["pypsa_network"])
 n.args = args
