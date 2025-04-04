@@ -1,18 +1,9 @@
-import os
-import pypsa
-
-from plot_comps import (
-    create_bus_map,
-    create_links_map,
-    create_lines_map,
-    create_buses_and_links_map,
-    create_buses_links_lines_map,
-)
+from network_visual import Etrago1
 
 args = {
     # INPUT
     "pypsa_network":"pypsa_results/results_ingolstadt", # path to pypsa results
-    "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts 3 file
+    "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
     # Visualisation
     "plot_settings":{
             "bussize": 10,
@@ -29,23 +20,18 @@ args = {
     },
 }
 
-# Load pypsa-network
-
-n = pypsa.Network(args["pypsa_network"])
-n.args = args
+etrago = Etrago1(args, csv_folder = args["pypsa_network"])
 
 # create maps
 
-create_bus_map(n)
+etrago.create_bus_map()
 
-create_links_map(n)
+etrago.create_links_map()
 
-create_lines_map(n)
+etrago.create_lines_map()
 
-create_buses_and_links_map(n)
+etrago.create_buses_and_links_map()
 
-create_buses_links_lines_map(n)
-
-
+etrago.create_buses_links_lines_map()
 
 

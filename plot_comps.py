@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 import io
 from base64 import b64encode
 
-def create_bus_map(network):
+def create_bus_map(etrago):
 
+    network = etrago.network
     args = network.args
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     geojson_file = args["nuts_3_map"]
@@ -63,8 +64,9 @@ def create_bus_map(network):
     print(f"✅ Interaktive Bus-Karte gespeichert unter: {output_file}")
 
 
-def create_links_map(network):
+def create_links_map(etrago):
 
+    network = etrago.network
     args = network.args
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
     geojson_file = args["nuts_3_map"]
@@ -136,8 +138,9 @@ def create_links_map(network):
     print(f"✅ Interaktive Link-Karte gespeichert unter: {output_file}")
 
 
-def create_lines_map(network):
+def create_lines_map(etrago):
 
+    network = etrago.network
     args = network.args
     linewidth = args.get("plot_settings", {}).get("linewidth", 3)
     geojson_file = args["nuts_3_map"]
@@ -218,8 +221,9 @@ def create_lines_map(network):
     print(f"✅ Interaktive Linien-Karte gespeichert unter: {output_file}")
 
 
-def create_buses_and_links_map(network):
+def create_buses_and_links_map(etrago):
 
+    network = etrago.network
     args = network.args
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
@@ -312,8 +316,9 @@ def create_buses_and_links_map(network):
 
 # Nun die letzte Funktion: Busse + Links + Lines gemeinsam
 
-def create_buses_links_lines_map(network):
+def create_buses_links_lines_map(etrago):
 
+    network = etrago.network
     args = network.args
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
