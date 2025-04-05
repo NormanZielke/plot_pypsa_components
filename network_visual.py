@@ -1,4 +1,4 @@
-
+import logging
 import pypsa
 
 from plot_comps import (
@@ -8,6 +8,8 @@ from plot_comps import (
     create_buses_and_links_map,
     create_buses_links_lines_map
 )
+
+logger = logging.getLogger(__name__)
 
 class Etrago1:
     """

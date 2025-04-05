@@ -314,8 +314,6 @@ def create_buses_and_links_map(etrago):
     print(f"✅ Interaktive Bus+Link-Karte gespeichert unter: {output_file}")
 
 
-# Nun die letzte Funktion: Busse + Links + Lines gemeinsam
-
 def create_buses_links_lines_map(etrago):
 
     network = etrago.network

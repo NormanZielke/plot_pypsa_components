@@ -1,4 +1,11 @@
+import logging
+
 from network_visual import Etrago1
+
+logger = logging.getLogger(__name__)
+
+# set format for logging massages 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 args = {
     # INPUT
@@ -33,5 +40,7 @@ etrago.create_lines_map()
 etrago.create_buses_and_links_map()
 
 etrago.create_buses_links_lines_map()
+
+logger.info("Maps successfully created.")
 
 
