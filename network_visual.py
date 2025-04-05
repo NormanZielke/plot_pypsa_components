@@ -16,15 +16,12 @@ class Etrago1:
     Erweiterte PyPSA-Netzklasse für Visualisierung, ähnlich wie Etrago.
     """
 
-    def __init__(self, args, csv_folder=None, name=""):
+    def __init__(self, args, csv_folder=None):
         self.args = args
-        self.name = name
+        self.name = args["name"] # To DO compose of args -> {interest_area}_{#AC_Buses}_{#CH_4_Buses}
 
         # PyPSA-Netzwerk laden
         self.network = pypsa.Network(csv_folder)
-        self.network.args = args  # wichtig für die Kartenfunktionen
-        # Methoden aus plot_comps_2 als eigene Methoden einbinden
-        # self._register_visualisation_methods()
 
     # Add functions
     create_bus_map = create_bus_map
