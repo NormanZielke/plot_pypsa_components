@@ -13,8 +13,13 @@ def create_bus_map(etrago):
 
     network = etrago.network
     args = etrago.args
+
     bussize = args.get("plot_settings", {}).get("bussize", 6)
-    geojson_file = args["nuts_3_map"]
+    interest_area = args["interest_area"]
+
+    # === NUTS-3 Shapefile laden ===
+    nuts_3_map = args["nuts_3_map"]
+    nuts = gpd.read_file(nuts_3_map)
 
     # Bus-Daten aus dem Netzwerk holen
     df = network.buses.copy()
@@ -23,10 +28,14 @@ def create_bus_map(etrago):
     # GeoDataFrame erstellen
     gdf_buses = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['x'], df['y']), crs="EPSG:4326")
 
-    # GeoJSON laden
-    gdf_countries = gpd.read_file(geojson_file)
+    gdf_buses = gdf_buses.to_crs(nuts.crs)
 
-    gdf_buses = gdf_buses.to_crs(gdf_countries.crs)
+    # === extract buses of interest area ===
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        # extract interest-area
+        nuts_interest = nuts[nuts["NUTS_NAME"].str.contains(interest_area, case=False)]
+        # buses in interest area
+        gdf_buses = gdf_buses[gdf_buses.geometry.within(nuts_interest.union_all())]
 
     # Karte initialisieren
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
@@ -40,7 +49,7 @@ def create_bus_map(etrago):
 
     # Ländergrenzen einfügen
     folium.GeoJson(
-        gdf_countries,
+        nuts,
         name="NUTS-3 Regions",
         tooltip=folium.GeoJsonTooltip(fields=["NUTS_NAME"], aliases=["Region: "]),
         style_function=lambda x: {"fillColor": "gray", "color": "black", "weight": 1, "fillOpacity": 0.2}
@@ -69,15 +78,33 @@ def create_bus_map(etrago):
 
     folium.LayerControl().add_to(m)
 
+    # Legende hinzufügen
+    legend_html = """
+        <div style="position: fixed; 
+             bottom: 30px; left: 30px; width: 200px; height: auto; 
+             background-color: white; border:2px solid grey; z-index:9999; font-size:14px;
+             padding: 10px;">
+        <b>Carrier Legende</b><br>
+        """
+    for carrier, color in carrier_color_map.items():
+        legend_html += f'<i style="background:{color};width:12px;height:12px;float:left;margin-right:8px;display:inline-block;"></i>{carrier}<br>'
+    legend_html += '</div>'
+    m.get_root().html.add_child(folium.Element(legend_html))
+
     # save busmap
     area = args["interest_area"]
     directory = f"maps/maps_{area}"
     os.makedirs(directory, exist_ok=True)
-    output_file = os.path.join(directory, f"bus_map_{area}.html")
+
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        directory = f"maps/maps_{area}/plot_of_interest"
+        os.makedirs(directory, exist_ok=True)
+        output_file = os.path.join(directory, f"buses_of_interest_map_{area}.html")
+    else:
+        output_file = os.path.join(directory, f"bus_map_{area}.html")
 
     m.save(output_file)
     print(f"✅ Interaktive Bus-Karte gespeichert unter: {output_file}")
-
 
 def create_links_map(etrago):
 
@@ -155,7 +182,6 @@ def create_links_map(etrago):
 
     m.save(output_file)
     print(f"✅ Interaktive Link-Karte gespeichert unter: {output_file}")
-
 
 def create_lines_map(etrago):
 
@@ -243,7 +269,6 @@ def create_lines_map(etrago):
 
     m.save(output_file)
     print(f"✅ Interaktive Linien-Karte gespeichert unter: {output_file}")
-
 
 def create_buses_and_links_map(etrago):
 
@@ -340,7 +365,6 @@ def create_buses_and_links_map(etrago):
 
     m.save(output_file)
     print(f"✅ Interaktive Bus+Link-Karte gespeichert unter: {output_file}")
-
 
 def create_buses_links_lines_map(etrago):
 

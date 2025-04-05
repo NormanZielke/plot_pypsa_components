@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 args = {
-    # INPUT
+    # == INPUT ==
     "pypsa_network":"pypsa_results/results_ingolstadt", # path to pypsa results
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
     # copied from etrago
@@ -20,7 +20,8 @@ args = {
     "name" : "Ingolstadt_30_14",  # {interest_area}_{#AC_Buses}_{#CH_4_Buses}
     # Visualisation
     "plot_settings":{
-        "bussize": 10,
+        "plot_comps_of_interest": False,
+        "bussize": 3,
         "linkwidth": 5,
         "linewidth": 3,
     },
@@ -43,5 +44,6 @@ logger.info("Maps successfully created.")
 interest_buses = etrago.find_interest_buses()
 
 print(interest_buses)
+print(len(interest_buses))
 
 
