@@ -477,4 +477,39 @@ def create_buses_links_lines_map(etrago):
     m.save(output_file)
     print(f"✅ Interaktive Komplett-Karte gespeichert unter: {output_file}")
 
-#def find_interest_buses(etrago):
+def create_maps(etrago):
+    create_bus_map(etrago)
+    create_links_map(etrago)
+    create_lines_map(etrago)
+    create_buses_and_links_map(etrago)
+    create_buses_links_lines_map(etrago)
+
+def find_interest_buses(etrago):
+
+    network = etrago.network
+    args = etrago.args
+
+    # === NUTS-3 Shapefile laden ===
+    nuts_3_map = args["nuts_3_map"]
+    nuts = gpd.read_file(nuts_3_map)
+
+    # === interest-area extrahieren ===
+    interest_area = nuts[nuts["NUTS_NAME"].str.contains(args["interest_area"], case=False)]
+
+    # === Busse in GeoDataFrame umwandeln ===
+    bus_gdf = gpd.GeoDataFrame(
+        network.buses.copy(),
+        geometry=gpd.points_from_xy(network.buses.x, network.buses.y),
+        crs="EPSG:4326"  # Koordinatensystem sicherstellen (ggf. anpassen!)
+    )
+
+    # In CRS der NUTS-3-Karte transformieren
+    bus_gdf = bus_gdf.to_crs(nuts.crs)
+
+    # === buses in interest area ===
+    buses_interest_area = bus_gdf[bus_gdf.geometry.within(interest_area.union_all())]
+
+    # === 6. Ergebnis: Liste der Busnamen ===
+    bus_list = buses_interest_area.index.tolist()
+
+    return bus_list
