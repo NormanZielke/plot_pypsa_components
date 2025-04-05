@@ -17,37 +17,37 @@ def create_bus_map(etrago):
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     interest_area = args["interest_area"]
 
-    # === NUTS-3 Shapefile laden ===
+    # === load NUTS-3 Shapefile ===
     nuts_3_map = args["nuts_3_map"]
     nuts = gpd.read_file(nuts_3_map)
 
-    # Bus-Daten aus dem Netzwerk holen
+    # collect buses from network
     df = network.buses.copy()
     df["name"] = df.index
 
-    # GeoDataFrame erstellen
+    # create GeoDataFrame for buses
     gdf_buses = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['x'], df['y']), crs="EPSG:4326")
 
     gdf_buses = gdf_buses.to_crs(nuts.crs)
 
     # === extract buses of interest area ===
     if args["plot_settings"]["plot_comps_of_interest"]:
-        # extract interest-area
+        # extract interest-area from shapefile
         nuts_interest = nuts[nuts["NUTS_NAME"].str.contains(interest_area, case=False)]
         # buses in interest area
         gdf_buses = gdf_buses[gdf_buses.geometry.within(nuts_interest.union_all())]
 
-    # Karte initialisieren
+    # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
 
-    # Titel einfügen # -> optional
+    # insert title # -> optional
     #title = f"{etrago.name} – Buskarte"
     #title_html = f"""
     #     <h3 align="center" style="font-size:20px"><b>{title}</b></h3>
     #"""
     #m.get_root().html.add_child(folium.Element(title_html))
 
-    # Ländergrenzen einfügen
+    # insert country borders
     folium.GeoJson(
         nuts,
         name="NUTS-3 Regions",
@@ -55,12 +55,12 @@ def create_bus_map(etrago):
         style_function=lambda x: {"fillColor": "gray", "color": "black", "weight": 1, "fillOpacity": 0.2}
     ).add_to(m)
 
-    # 6. Farben nach Carrier
+    # colors by carrier
     carriers = gdf_buses['carrier'].unique()
     colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
     carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
 
-    # Marker einfügen
+    # insert markers for buses
     for _, row in gdf_buses.iterrows():
         color = carrier_color_map[row['carrier']]
         popup_text = f"<b>Bus:</b> {row['name']}<br><b>Carrier:</b> {row['carrier']}"
@@ -78,7 +78,7 @@ def create_bus_map(etrago):
 
     folium.LayerControl().add_to(m)
 
-    # Legende hinzufügen
+    # create legend
     legend_html = """
         <div style="position: fixed; 
              bottom: 30px; left: 30px; width: 200px; height: auto; 
@@ -110,7 +110,9 @@ def create_links_map(etrago):
 
     network = etrago.network
     args = etrago.args
+
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
+
     geojson_file = args["nuts_3_map"]
 
     # Bus- und Linkdaten laden
