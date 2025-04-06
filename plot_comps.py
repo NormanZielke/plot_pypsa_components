@@ -17,7 +17,7 @@ def create_bus_map(etrago):
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     interest_area = args["interest_area"]
 
-    # === load NUTS-3 Shapefile ===
+    # load NUTS-3 Shapefile
     nuts_3_map = args["nuts_3_map"]
     nuts = gpd.read_file(nuts_3_map)
 
@@ -27,15 +27,16 @@ def create_bus_map(etrago):
 
     # create GeoDataFrame for buses
     gdf_buses = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['x'], df['y']), crs="EPSG:4326")
-
+    # reprojects gdf_buses into the coordinate system of nuts
     gdf_buses = gdf_buses.to_crs(nuts.crs)
 
-    # === extract buses of interest area ===
+    # === select buses of interest area ===
     if args["plot_settings"]["plot_comps_of_interest"]:
+        gdf_buses = find_interest_buses(etrago)
         # extract interest-area from shapefile
-        nuts_interest = nuts[nuts["NUTS_NAME"].str.contains(interest_area, case=False)]
+        #nuts_interest = nuts[nuts["NUTS_NAME"].str.contains(interest_area, case=False)]
         # buses in interest area
-        gdf_buses = gdf_buses[gdf_buses.geometry.within(nuts_interest.union_all())]
+        #gdf_buses = gdf_buses[gdf_buses.geometry.within(nuts_interest.union_all())]
 
     # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
@@ -47,7 +48,7 @@ def create_bus_map(etrago):
     #"""
     #m.get_root().html.add_child(folium.Element(title_html))
 
-    # insert country borders
+    # add NUTS-3 - regions
     folium.GeoJson(
         nuts,
         name="NUTS-3 Regions",
@@ -60,7 +61,7 @@ def create_bus_map(etrago):
     colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
     carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
 
-    # insert markers for buses
+    # plot buses
     for _, row in gdf_buses.iterrows():
         color = carrier_color_map[row['carrier']]
         popup_text = f"<b>Bus:</b> {row['name']}<br><b>Carrier:</b> {row['carrier']}"
@@ -78,7 +79,7 @@ def create_bus_map(etrago):
 
     folium.LayerControl().add_to(m)
 
-    # create legend
+    # add legend
     legend_html = """
         <div style="position: fixed; 
              bottom: 30px; left: 30px; width: 200px; height: auto; 
@@ -91,7 +92,7 @@ def create_bus_map(etrago):
     legend_html += '</div>'
     m.get_root().html.add_child(folium.Element(legend_html))
 
-    # save busmap
+    # === save busmap ===
     area = args["interest_area"]
     directory = f"maps/maps_{area}"
     os.makedirs(directory, exist_ok=True)
@@ -113,38 +114,40 @@ def create_links_map(etrago):
 
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
 
-    geojson_file = args["nuts_3_map"]
+    # load NUTS-3 Shapefile
+    nuts_3_map = args["nuts_3_map"]
+    nuts = gpd.read_file(nuts_3_map)
 
-    # Bus- und Linkdaten laden
+    # collect buses and links from network
     buses = network.buses.copy()
     buses["name"] = buses.index
     links = network.links.copy()
 
-    # GeoDataFrame für Busse
+    # create GeoDataFrame for buses
     gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
-    gdf_countries = gpd.read_file(geojson_file)
-    gdf_buses = gdf_buses.to_crs(gdf_countries.crs)
+    # reprojects gdf_buses into the coordinate system of nuts
+    gdf_buses = gdf_buses.to_crs(nuts.crs)
 
-    # Busname zu Koordinaten und Carrier zuordnen
+    # Assign bus name to coordinates and carrier
     bus_lookup = gdf_buses.set_index('name')[['geometry', 'carrier']]
 
-    # Farben pro Carrier zuweisen
-    carriers = gdf_buses['carrier'].unique()
-    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
-    carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
-
-    # Interaktive Karte erstellen
+    # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
 
-    # GeoJSON mit NUTS-Regionen hinzufügen
+    # add NUTS-3 - regions
     folium.GeoJson(
-        gdf_countries,
+        nuts,
         name="NUTS-3 Regions",
         tooltip=folium.GeoJsonTooltip(fields=["NUTS_NAME"], aliases=["Region: "]),
         style_function=lambda x: {"fillColor": "gray", "color": "black", "weight": 1, "fillOpacity": 0.2}
     ).add_to(m)
 
-    # Linien für Links plotten
+    # colors by carrier
+    carriers = gdf_buses['carrier'].unique()
+    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
+    carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
+
+    # plot links
     for _, row in links.iterrows():
         try:
             point0 = bus_lookup.loc[row['bus0'], 'geometry']
@@ -163,7 +166,7 @@ def create_links_map(etrago):
         except KeyError:
             continue  # Busname nicht gefunden – überspringen
 
-    # Legende hinzufügen
+    # add legend
     legend_html = """
     <div style="position: fixed; 
          bottom: 30px; left: 30px; width: 200px; height: auto; 
@@ -515,27 +518,30 @@ def find_interest_buses(etrago):
     network = etrago.network
     args = etrago.args
 
-    # === NUTS-3 Shapefile laden ===
+    # NUTS-3 Shapefile laden
     nuts_3_map = args["nuts_3_map"]
     nuts = gpd.read_file(nuts_3_map)
 
-    # === interest-area extrahieren ===
+    # select interest area
     interest_area = nuts[nuts["NUTS_NAME"].str.contains(args["interest_area"], case=False)]
 
-    # === Busse in GeoDataFrame umwandeln ===
+    # Busse in GeoDataFrame umwandeln
     bus_gdf = gpd.GeoDataFrame(
         network.buses.copy(),
         geometry=gpd.points_from_xy(network.buses.x, network.buses.y),
-        crs="EPSG:4326"  # Koordinatensystem sicherstellen (ggf. anpassen!)
+        crs="EPSG:4326"
     )
 
-    # In CRS der NUTS-3-Karte transformieren
+    # index als Spalte speichern
+    bus_gdf["name"] = bus_gdf.index
+
+    # transform bus_gdf into CRS of the NUTS-3 map
     bus_gdf = bus_gdf.to_crs(nuts.crs)
 
-    # === buses in interest area ===
+    # select buses in interest area
     buses_interest_area = bus_gdf[bus_gdf.geometry.within(interest_area.union_all())]
 
     # === 6. Ergebnis: Liste der Busnamen ===
-    bus_list = buses_interest_area.index.tolist()
+    #bus_list = buses_interest_area.index.tolist()
 
-    return bus_list
+    return buses_interest_area
