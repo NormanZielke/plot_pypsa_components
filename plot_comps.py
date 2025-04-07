@@ -33,10 +33,6 @@ def create_bus_map(etrago):
     # === select buses of interest area ===
     if args["plot_settings"]["plot_comps_of_interest"]:
         gdf_buses = find_interest_buses(etrago)
-        # extract interest-area from shapefile
-        #nuts_interest = nuts[nuts["NUTS_NAME"].str.contains(interest_area, case=False)]
-        # buses in interest area
-        #gdf_buses = gdf_buses[gdf_buses.geometry.within(nuts_interest.union_all())]
 
     # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
@@ -108,7 +104,6 @@ def create_bus_map(etrago):
     print(f"✅ Interaktive Bus-Karte gespeichert unter: {output_file}")
 
 def create_links_map(etrago):
-
     network = etrago.network
     args = etrago.args
 
@@ -118,14 +113,29 @@ def create_links_map(etrago):
     nuts_3_map = args["nuts_3_map"]
     nuts = gpd.read_file(nuts_3_map)
 
-    # collect buses and links from network
-    buses = network.buses.copy()
-    buses["name"] = buses.index
-    links = network.links.copy()
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        # select buses and links of interest area
+        links = find_links_connected_to_buses(etrago)
+        # Load all buses that appear in these links
+        used_buses = set(links['bus0']) | set(links['bus1'])
 
-    # create GeoDataFrame for buses
-    gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
-    # reprojects gdf_buses into the coordinate system of nuts
+        all_buses = network.buses.copy()
+        all_buses["name"] = all_buses.index
+        filtered_buses = all_buses.loc[all_buses.index.isin(used_buses)]
+        gdf_buses = gpd.GeoDataFrame(
+            filtered_buses,
+            geometry=gpd.points_from_xy(filtered_buses['x'], filtered_buses['y']),
+            crs="EPSG:4326"
+        )
+
+    else:
+        # collect buses and links from network
+        buses = network.buses.copy()
+        buses["name"] = buses.index
+        links = network.links.copy()
+        gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
+
+    # transform bus_gdf into CRS of the NUTS-3 map
     gdf_buses = gdf_buses.to_crs(nuts.crs)
 
     # Assign bus name to coordinates and carrier
@@ -179,11 +189,17 @@ def create_links_map(etrago):
     legend_html += '</div>'
     m.get_root().html.add_child(folium.Element(legend_html))
 
-    # save links_map
+    # === save links_map ===
     area = args["interest_area"]
     directory = f"maps/maps_{area}"
     os.makedirs(directory, exist_ok=True)
-    output_file = os.path.join(directory, f"links_map_{area}.html")
+
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        directory = f"maps/maps_{area}/plot_of_interest"
+        os.makedirs(directory, exist_ok=True)
+        output_file = os.path.join(directory, f"links_interest_map_{area}.html")
+    else:
+        output_file = os.path.join(directory, f"links_map_{area}.html")
 
     m.save(output_file)
     print(f"✅ Interaktive Link-Karte gespeichert unter: {output_file}")
@@ -514,7 +530,6 @@ def create_maps(etrago):
     create_buses_links_lines_map(etrago)
 
 def find_interest_buses(etrago):
-
     network = etrago.network
     args = etrago.args
 
@@ -545,3 +560,19 @@ def find_interest_buses(etrago):
     #bus_list = buses_interest_area.index.tolist()
 
     return buses_interest_area
+
+def find_links_connected_to_buses(etrago):
+    network = etrago.network
+
+    # find buses in interst area
+    gdf_buses_interest = find_interest_buses(etrago)
+    buses_of_interest = gdf_buses_interest.index.tolist()
+
+    # Links where bus0 or bus1 is in the area of interest
+    links = network.links.copy()
+    connected_links = links[
+        (links["bus0"].isin(buses_of_interest)) |
+        (links["bus1"].isin(buses_of_interest))
+    ]
+
+    return connected_links

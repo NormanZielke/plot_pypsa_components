@@ -20,7 +20,7 @@ args = {
     "name" : "Ingolstadt_30_14",  # {interest_area}_{#AC_Buses}_{#CH_4_Buses}
     # Visualisation
     "plot_settings":{
-        "plot_comps_of_interest": False, # plot only pypsa-components of interest ara
+        "plot_comps_of_interest": True, # plot only pypsa-components of interest ara
         "bussize": 10,
         "linkwidth": 5,
         "linewidth": 3,
@@ -32,7 +32,7 @@ etrago = Etrago1(args, csv_folder = args["pypsa_network"])
 # create maps
 
 etrago.create_bus_map()
-#etrago.create_links_map()
+etrago.create_links_map()
 #etrago.create_lines_map()
 #etrago.create_buses_and_links_map()
 #etrago.create_buses_links_lines_map()
@@ -40,11 +40,3 @@ etrago.create_bus_map()
 #etrago.create_maps()
 
 logger.info("Maps successfully created.")
-
-interest_buses = etrago.find_interest_buses()
-
-print(interest_buses)
-print(len(interest_buses))
-
-
-

@@ -9,6 +9,7 @@ from plot_comps import (
     create_buses_links_lines_map,
     create_maps,
     find_interest_buses,
+    find_links_connected_to_buses
 )
 
 logger = logging.getLogger(__name__)
@@ -39,3 +40,5 @@ class Etrago1:
     create_maps = create_maps
 
     find_interest_buses = find_interest_buses
+
+    find_links_connected_to_buses = find_links_connected_to_buses
