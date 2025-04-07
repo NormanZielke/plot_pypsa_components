@@ -8,6 +8,8 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import io
 from base64 import b64encode
+import numpy as np
+from shapely.affinity import translate
 
 def create_bus_map(etrago):
 
@@ -33,6 +35,8 @@ def create_bus_map(etrago):
     # === select buses of interest area ===
     if args["plot_settings"]["plot_comps_of_interest"]:
         gdf_buses = find_interest_buses(etrago)
+        # Move duplicates to avoid overlapping
+        gdf_buses = apply_jitter_to_duplicate_buses(gdf_buses, epsg_m=3857, jitter_radius=500)
 
     # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
@@ -53,7 +57,7 @@ def create_bus_map(etrago):
     ).add_to(m)
 
     # colors by carrier
-    carriers = gdf_buses['carrier'].unique()
+    carriers = network.buses['carrier'].unique()
     colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
     carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
 
@@ -153,7 +157,7 @@ def create_links_map(etrago):
     ).add_to(m)
 
     # colors by carrier
-    carriers = gdf_buses['carrier'].unique()
+    carriers = network.buses['carrier'].unique()
     colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
     carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
 
@@ -576,3 +580,43 @@ def find_links_connected_to_buses(etrago):
     ]
 
     return connected_links
+
+def apply_jitter_to_duplicate_buses(gdf_buses, epsg_m=3857, jitter_radius=500):
+    """
+    Verschiebt Busse mit identischen Koordinaten leicht, damit sie in Karten
+    (z. B. mit Folium) sichtbar bleiben und sich nicht überdecken.
+
+    Parameters
+    ----------
+    gdf_buses : GeoDataFrame
+        GeoDataFrame mit Bus-Geometrien.
+    epsg_m : int
+        Temporäres metrisches Koordinatensystem für Verschiebung (z. B. 3857 oder 25832).
+    jitter_radius : float
+        Verschiebungsradius in Metern (bzw. CRS-Einheit), Standard: 500m.
+
+    Returns
+    -------
+    GeoDataFrame mit jittered geometries im ursprünglichen CRS.
+    """
+
+    original_crs = gdf_buses.crs
+    gdf_proj = gdf_buses.to_crs(epsg=epsg_m)
+
+    # Koordinaten als Tupel extrahieren
+    coord_series = gdf_proj.geometry.apply(lambda g: (round(g.x, 1), round(g.y, 1)))
+    coord_counts = coord_series.value_counts()
+
+    # Koordinaten mit mehrfach belegten Punkten
+    duplicate_coords = coord_counts[coord_counts > 1].index
+
+    for coord in duplicate_coords:
+        idxs = coord_series[coord_series == coord].index
+        for i, idx in enumerate(idxs):
+            angle = 2 * np.pi * i / len(idxs)
+            dx = jitter_radius * np.cos(angle)
+            dy = jitter_radius * np.sin(angle)
+            gdf_proj.at[idx, 'geometry'] = translate(gdf_proj.at[idx, 'geometry'], xoff=dx, yoff=dy)
+
+    # zurücktransformieren in ursprüngliches CRS
+    return gdf_proj.to_crs(original_crs)
