@@ -31,9 +31,9 @@ etrago = Etrago1(args, csv_folder = args["pypsa_network"])
 
 # create maps
 
-etrago.create_bus_map()
-etrago.create_links_map()
-#etrago.create_lines_map()
+#etrago.create_bus_map()
+#etrago.create_links_map()
+etrago.create_lines_map()
 #etrago.create_buses_and_links_map()
 #etrago.create_buses_links_lines_map()
 

@@ -194,36 +194,68 @@ def create_lines_map(etrago):
     network = etrago.network
     args = etrago.args
     linewidth = args.get("plot_settings", {}).get("linewidth", 3)
-    geojson_file = args["nuts_3_map"]
 
-    # Daten laden
-    buses = network.buses.copy()
-    buses["name"] = buses.index
-    lines = network.lines.copy()
+    # load NUTS-3 Shapefile
+    nuts_3_map = args["nuts_3_map"]
+    nuts = gpd.read_file(nuts_3_map)
 
-    gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
-    gdf_countries = gpd.read_file(geojson_file)
-    gdf_buses = gdf_buses.to_crs(gdf_countries.crs)
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        # === filter lines connected to interest area ===
+        lines = network.lines.copy()
+        buses_interest = find_interest_buses(etrago)
+        bus_names = buses_interest.index.tolist()
+
+        # select only lines where either bus0 or bus1 is in area
+        lines = lines[
+            lines['bus0'].isin(bus_names) |
+            lines['bus1'].isin(bus_names)
+            ]
+
+        # build filtered bus dataframe for geometry
+        all_buses = network.buses.copy()
+        all_buses["name"] = all_buses.index
+        used_buses = set(lines['bus0']) | set(lines['bus1'])
+        filtered_buses = all_buses.loc[all_buses.index.isin(used_buses)]
+
+        gdf_buses = gpd.GeoDataFrame(
+            filtered_buses,
+            geometry=gpd.points_from_xy(filtered_buses['x'], filtered_buses['y']),
+            crs="EPSG:4326"
+        )
+        gdf_buses = gdf_buses.to_crs(nuts.crs)
+
+    else:
+        # === full network ===
+        lines = network.lines.copy()
+        buses = network.buses.copy()
+        buses["name"] = buses.index
+        gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
+        gdf_buses = gdf_buses.to_crs(nuts.crs)
+
+    # === prepare bus lookup ===
     bus_lookup = gdf_buses.set_index('name')['geometry']
 
-    # Farbskala vorbereiten
-    norm = mcolors.Normalize(vmin=lines['s_max_pu'].min(), vmax=lines['s_max_pu'].max())
+    # === color normalization (s_max_pu) ===
+    norm = mcolors.Normalize(vmin= network.lines['s_max_pu'].min(),
+                             vmax= network.lines['s_max_pu'].max())
     cmap = cm.get_cmap('viridis')
 
     def s_max_pu_to_hex(s):
         rgba = cmap(norm(s))
         return mcolors.to_hex(rgba)
 
-    # Karte initialisieren
+    # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
 
+    # === add NUTS-3 - regions ===
     folium.GeoJson(
-        gdf_countries,
+        nuts,
         name="NUTS-3 Regions",
         tooltip=folium.GeoJsonTooltip(fields=["NUTS_NAME"], aliases=["Region: "]),
         style_function=lambda x: {"fillColor": "gray", "color": "black", "weight": 1, "fillOpacity": 0.2}
     ).add_to(m)
 
+    # === plot lines ===
     for _, row in lines.iterrows():
         try:
             p0 = bus_lookup.loc[row['bus0']]
@@ -240,7 +272,7 @@ def create_lines_map(etrago):
         except KeyError:
             continue
 
-    # Legende mit matplotlib-Farbskala einbetten
+    # === add legend (colorbar image) ===
     fig, ax = plt.subplots(figsize=(4, 0.4))
     fig.subplots_adjust(bottom=0.5)
 
@@ -267,11 +299,17 @@ def create_lines_map(etrago):
     """
     m.get_root().html.add_child(folium.Element(legend_html))
 
-    # save lines_map
+    # === save lines_map ===
     area = args["interest_area"]
     directory = f"maps/maps_{area}"
     os.makedirs(directory, exist_ok=True)
-    output_file = os.path.join(directory, f"lines_map_{area}.html")
+
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        directory = os.path.join(directory, "plot_of_interest")
+        os.makedirs(directory, exist_ok=True)
+        output_file = os.path.join(directory, f"lines_interest_map_{area}.html")
+    else:
+        output_file = os.path.join(directory, f"lines_map_{area}.html")
 
     m.save(output_file)
     print(f"✅ Interaktive Linien-Karte gespeichert unter: {output_file}")
