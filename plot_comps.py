@@ -56,7 +56,7 @@ def create_bus_map(etrago):
     ).add_to(m)
 
     # === colors by carrier ===
-    carriers = network.buses['carrier'].unique()
+    carriers = gdf_buses['carrier'].unique()
     carrier_color_map, legend_order = get_carrier_color_map(carriers)
 
     # === plot buses ===
@@ -619,17 +619,17 @@ def get_carrier_color_map(carriers):
         "rural_heat_store": "darkorange"
     }
 
-    # Alle bekannten Carrier in fester Reihenfolge
-    ordered_carriers = list(predefined_colors.keys())
+    # Liste der tatsächlich im Plot vorkommenden Carrier
+    carriers_used = set(carriers)
 
-    # Rückgabe: alle bekannten + evtl. unbekannte Carrier (in beliebiger Reihenfolge)
-    complete_carrier_set = list(carriers)
-    full_map = {carrier: predefined_colors.get(carrier, "gray") for carrier in complete_carrier_set}
+    # Farbzuordnung nur für verwendete Carrier
+    color_map = {carrier: predefined_colors.get(carrier, "gray") for carrier in carriers_used}
 
-    # Reihenfolge in der Legende: bekannte zuerst (in Wunschreihenfolge), danach evtl. unbekannte
-    full_ordered = ordered_carriers + [c for c in complete_carrier_set if c not in ordered_carriers]
+    # Geordnete Anzeige nur für verwendete Carrier
+    legend_order = [c for c in predefined_colors if c in carriers_used] + \
+                   [c for c in carriers_used if c not in predefined_colors]
 
-    return full_map, full_ordered
+    return color_map, legend_order
 
 def get_link_carrier_color_map(carriers):
     """
@@ -637,27 +637,46 @@ def get_link_carrier_color_map(carriers):
     Unbekannte Carrier werden mit 'gray' dargestellt.
     """
     predefined_colors = {
+        'dsm': 'black',
+        'central_heat_pump': 'purple',
+        'central_resistive_heater': 'darkred',
+        'rural_heat_pump': 'peru',
+        'power_to_H2': 'mediumblue',  # Wasserstofferzeugung aus Strom
         'BEV_charger': 'deepskyblue',
+        'DC': 'teal',  # Gleichstromverbindungen
+        'OCGT': 'darkslategray',  # Open Cycle Gas Turbine
+        'CH4': 'green',  # Methan
+        'H2_to_power': 'slateblue',  # Rückverstromung von H2
+        'central_heat_store_charger': 'lightcoral',
+        'rural_heat_store_charger': 'burlywood',
+        'central_heat_store_discharger': 'indianred',
+        'rural_heat_store_discharger': 'saddlebrown',
         'central_gas_CHP': 'orange',
+        'industrial_gas_CHP': 'forestgreen',
         'central_gas_CHP_heat': 'darkorange',
         'central_gas_boiler': 'brown',
-        'central_heat_pump': 'purple',
-        'central_heat_store_charger': 'lightcoral',
-        'central_heat_store_discharger': 'indianred',
-        'central_resistive_heater': 'darkred',
-        'dsm': 'black',
-        'industrial_gas_CHP': 'green',
-        'rural_heat_pump': 'peru',
-        'rural_heat_store_charger': 'burlywood',
-        'rural_heat_store_discharger': 'saddlebrown'
+        'CH4_to_H2': 'darkcyan',  # Methan-Reformierung
+        'H2_to_CH4': 'goldenrod'  # Methanisierung
     }
 
-    ordered_carriers = list(predefined_colors.keys())
+    # nur tatsächlich genutzte Carrier berücksichtigen
+    used_carriers = set(carriers)
 
-    full_map = {carrier: predefined_colors.get(carrier, "gray") for carrier in carriers}
-    full_ordered = ordered_carriers + [c for c in carriers if c not in ordered_carriers]
+    # Farbzuweisung nur für diese
+    color_map = {carrier: predefined_colors.get(carrier, "gray") for carrier in used_carriers}
 
-    return full_map, full_ordered
+    # geordnete Anzeige in der Legende
+    legend_order = [c for c in predefined_colors if c in used_carriers] + \
+                   [c for c in used_carriers if c not in predefined_colors]
+
+    return color_map, legend_order
+
+    #ordered_carriers = list(predefined_colors.keys())
+
+    #full_map = {carrier: predefined_colors.get(carrier, "gray") for carrier in carriers}
+    #full_ordered = ordered_carriers + [c for c in carriers if c not in ordered_carriers]
+
+    #return full_map, full_ordered
 
 def add_carrier_legend_to_map(m, carrier_color_map, legend_order):
     """
@@ -675,10 +694,10 @@ def add_carrier_legend_to_map(m, carrier_color_map, legend_order):
 
     legend_html = """
         <div style="position: fixed; 
-             bottom: 30px; left: 30px; width: 200px; height: auto; 
+             bottom: 30px; left: 30px; width: 250px; height: auto; 
              background-color: white; border:2px solid grey; z-index:9999; font-size:14px;
-             padding: 10px;">
-        <b>Carrier Legende</b><br>
+             padding: 10px; line-height: 1.5;">
+        <b>Carriers</b><br>
     """
 
     for carrier in legend_order:

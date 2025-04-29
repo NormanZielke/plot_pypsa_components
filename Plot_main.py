@@ -20,7 +20,7 @@ args = {
     "name" : "Ingolstadt_30_14",  # {interest_area}_{#AC_Buses}_{#CH_4_Buses}
     # Visualisation
     "plot_settings":{
-        "plot_comps_of_interest": True, # plot only pypsa-components of interest ara
+        "plot_comps_of_interest": False, # plot only pypsa-components of interest ara
         "bussize": 10,
         "linkwidth": 5,
         "linewidth": 3,
