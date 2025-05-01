@@ -318,43 +318,70 @@ def create_buses_and_links_map(etrago):
 
     network = etrago.network
     args = etrago.args
+
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
-    geojson_file = args["nuts_3_map"]
 
-    # Daten laden
-    buses = network.buses.copy()
-    buses["name"] = buses.index
-    links = network.links.copy()
+    # === load NUTS-3 Shapefile ===
+    nuts_3_map = args["nuts_3_map"]
+    nuts = gpd.read_file(nuts_3_map)
 
-    # GeoDataFrame für Busse
-    gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
-    # GeoDataFrame für GeoJSON
-    gdf_countries = gpd.read_file(geojson_file)
-    #
-    gdf_buses = gdf_buses.to_crs(gdf_countries.crs)
-    # Lookup für Buskoordinaten und Carrier
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        # Determine interest area buses directly
+        gdf_buses_interest = find_interest_buses(etrago)
+
+        # Left with at least one of these buses
+        links = find_links_connected_to_buses(etrago)
+        linked_buses = set(links['bus0']) | set(links['bus1'])
+
+        # ALL buses that appear in links (for coordinates/lookup)
+        all_buses = network.buses.copy()
+        all_buses["name"] = all_buses.index
+        buses_for_lookup = all_buses.loc[all_buses.index.isin(linked_buses)]
+
+        gdf_buses_lookup = gpd.GeoDataFrame(
+            buses_for_lookup,
+            geometry=gpd.points_from_xy(buses_for_lookup['x'], buses_for_lookup['y']),
+            crs="EPSG:4326"
+        ).to_crs(nuts.crs)
+
+        # Combine interest buses and lookup buses
+        gdf_buses = pd.concat([gdf_buses_interest, gdf_buses_lookup])
+        gdf_buses = gdf_buses[~gdf_buses.index.duplicated(keep='first')]
+
+        # Move duplicates to avoid overlapping
+        gdf_buses = apply_jitter_to_duplicate_buses(gdf_buses, epsg_m=3857, jitter_radius=500)
+    else:
+        # === load all buses and links ===
+        buses = network.buses.copy()
+        buses["name"] = buses.index
+        gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326").to_crs(nuts.crs)
+        links = network.links.copy()
+
+    # === create lookup for bus coordinates and carrier ===
     bus_lookup = gdf_buses.set_index('name')[['geometry', 'carrier']]
 
-    # --- Farben pro Carrier definieren ---
-    carriers = gdf_buses['carrier'].unique()
-    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
-    carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
-
-    # Interaktive Karte initialisieren
+    # === initiate map ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
 
-    # GeoJSON-Grenzen hinzufügen
+    # === add NUTS-3 - regions ===
     folium.GeoJson(
-        gdf_countries,
+        nuts,
         name="NUTS-3 Regions",
         tooltip=folium.GeoJsonTooltip(fields=["NUTS_NAME"], aliases=["Region: "]),
         style_function=lambda x: {"fillColor": "gray", "color": "black", "weight": 1, "fillOpacity": 0.2}
     ).add_to(m)
 
-    # --- Busse als Punkte hinzufügen ---
+    # === carrier colormaps ===
+    carriers_buses = gdf_buses['carrier'].unique()
+    carrier_color_map_buses, legend_order_buses = get_carrier_color_map(carriers_buses)
+
+    carriers_links = links['carrier'].unique()
+    carrier_color_map_links, legend_order_links = get_link_carrier_color_map(carriers_links)
+
+    # === plot buses ===
     for _, row in gdf_buses.iterrows():
-        color = carrier_color_map[row['carrier']]
+        color = carrier_color_map_buses.get(row['carrier'], "gray")
         popup_text = f"<b>Bus:</b> {row['name']}<br><b>Carrier:</b> {row['carrier']}"
         tooltip_text = f"{row['name']} ({row['carrier']})"
         folium.CircleMarker(
@@ -368,13 +395,14 @@ def create_buses_and_links_map(etrago):
             tooltip=tooltip_text
         ).add_to(m)
 
-    # --- Links als Linien hinzufügen ---
+    # === plot links ===
     for _, row in links.iterrows():
         try:
             point0 = bus_lookup.loc[row['bus0'], 'geometry']
             point1 = bus_lookup.loc[row['bus1'], 'geometry']
-            carrier = bus_lookup.loc[row['bus0'], 'carrier']
-            color = carrier_color_map.get(carrier, "gray")
+            carrier = row['carrier']
+            color = carrier_color_map_links.get(carrier, "gray")
+
             folium.PolyLine(
                 locations=[[point0.y, point0.x], [point1.y, point1.x]],
                 color=color,
@@ -385,30 +413,28 @@ def create_buses_and_links_map(etrago):
         except KeyError:
             continue
 
-    # Legende
-    legend_html = """
-    <div style="position: fixed; 
-         bottom: 30px; left: 30px; width: 200px; height: auto; 
-         background-color: white; border:2px solid grey; z-index:9999; font-size:14px;
-         padding: 10px;">
-    <b>Carrier Legende</b><br>
-    """
-    for carrier, color in carrier_color_map.items():
-        legend_html += f'<i style="background:{color};width:12px;height:12px;float:left;margin-right:8px;display:inline-block;"></i>{carrier}<br>'
-    legend_html += '</div>'
-    m.get_root().html.add_child(folium.Element(legend_html))
-
-    # --- Layer Control ---
+    # === LayerControl & Legend ===
     folium.LayerControl().add_to(m)
+    # separate Legende für Busse
+    add_carrier_legend_to_map(m, carrier_color_map_buses, legend_order_buses, position="bottomleft", title="Bus-Carrier")
 
-    # --- Karte speichern ---
+    # separate Legende für Links
+    add_carrier_legend_to_map(m, carrier_color_map_links, legend_order_links, position="bottomright", title="Link-Carrier")
+
+    # === save map ===
     area = args["interest_area"]
     directory = f"maps/maps_{area}"
     os.makedirs(directory, exist_ok=True)
-    output_file = os.path.join(directory, f"buses_links_map_{area}.html")
+
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        directory = f"{directory}/plot_of_interest"
+        os.makedirs(directory, exist_ok=True)
+        output_file = os.path.join(directory, f"buses_links_interest_map_{area}.html")
+    else:
+        output_file = os.path.join(directory, f"buses_links_map_{area}.html")
 
     m.save(output_file)
-    print(f"✅ Interaktive Bus+Link-Karte gespeichert unter: {output_file}")
+    print(f"✅ Interaktive Buses+Links-Karte gespeichert unter: {output_file}")
 
 def create_buses_links_lines_map(etrago):
 
@@ -716,7 +742,7 @@ def get_link_carrier_color_map(carriers):
 
     #return full_map, full_ordered
 
-def add_carrier_legend_to_map(m, carrier_color_map, legend_order):
+def add_carrier_legend_to_map(m, carrier_color_map, legend_order, position="bottomleft", title="Carrier Legende"):
     """
     Adds a color-coded legend to the map based on the carrier_color_map.
 
@@ -729,21 +755,31 @@ def add_carrier_legend_to_map(m, carrier_color_map, legend_order):
     legend_order : list
         Sequence of carriers for display in the legend.
     """
+    # CSS-Positionierung
+    positions = {
+        "bottomleft": "bottom: 30px; left: 30px;",
+        "bottomright": "bottom: 30px; right: 30px;",
+        "topleft": "top: 30px; left: 30px;",
+        "topright": "top: 30px; right: 30px;"
+    }
 
-    legend_html = """
-        <div style="position: fixed; 
-             bottom: 30px; left: 30px; width: 250px; height: auto; 
-             background-color: white; border:2px solid grey; z-index:9999; font-size:14px;
-             padding: 10px; line-height: 1.5;">
-        <b>Carriers</b><br>
+    location = positions.get(position, "bottom: 30px; left: 30px;")
+
+    legend_html = f"""
+    <div style="position: fixed; {location} width: 250px; height: auto;
+         background-color: white; border:2px solid grey; z-index:9999; 
+         font-size:14px; padding: 10px; line-height: 1.5;">
+    <b>{title}</b><br>
     """
 
     for carrier in legend_order:
         if carrier in carrier_color_map:
             color = carrier_color_map[carrier]
             legend_html += (
-                f'<i style="background:{color};width:12px;height:12px;float:left;'
-                f'margin-right:8px;display:inline-block;"></i>{carrier}<br>'
+                f'<div style="margin-bottom:4px;">'
+                f'<span style="display:inline-block;width:16px;height:16px;'
+                f'background:{color};margin-right:10px;border:1px solid #333;"></span>'
+                f'{carrier}</div>'
             )
 
     legend_html += '</div>'
