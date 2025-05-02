@@ -440,50 +440,93 @@ def create_buses_links_lines_map(etrago):
 
     network = etrago.network
     args = etrago.args
+
     bussize = args.get("plot_settings", {}).get("bussize", 6)
     linkwidth = args.get("plot_settings", {}).get("linkwidth", 3)
-    linewidth = args.get("plot_settings", {}).get("linewidth", 2)
-    geojson_file = args["nuts_3_map"]
+    linewidth = args.get("plot_settings", {}).get("linewidth", 3)
 
-    # Daten
-    buses = network.buses.copy()
-    buses["name"] = buses.index
-    links = network.links.copy()
-    lines = network.lines.copy()
+    # === load NUTS-3 Shapefile ===
+    nuts_3_map = args["nuts_3_map"]
+    nuts = gpd.read_file(nuts_3_map)
 
-    # GeoDataFrame für Busse
-    gdf_buses = gpd.GeoDataFrame(buses, geometry=gpd.points_from_xy(buses['x'], buses['y']), crs="EPSG:4326")
-    # GeoDataFrame für GeoJSON
-    gdf_countries = gpd.read_file(geojson_file)
-    #
-    gdf_buses = gdf_buses.to_crs(gdf_countries.crs)
-    # Lookup für Buskoordinaten und Carrier
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        # === Interest-Area-Busse direkt ermitteln ===
+        gdf_buses_interest = find_interest_buses(etrago)
+
+        # === Links & Lines mit mindestens einem Bus in Region ===
+        links = find_links_connected_to_buses(etrago)
+        lines = network.lines.copy()
+        buses_interest_names = gdf_buses_interest.index.tolist()
+        lines = lines[
+            lines['bus0'].isin(buses_interest_names) |
+            lines['bus1'].isin(buses_interest_names)
+        ]
+
+        # === ALLE verbundenen Busse (für Koordinaten- und Farbanzeige) ===
+        all_buses = network.buses.copy()
+        all_buses["name"] = all_buses.index
+        buses_used = set(links['bus0']) | set(links['bus1']) | set(lines['bus0']) | set(lines['bus1'])
+        buses_for_lookup = all_buses.loc[all_buses.index.isin(buses_used)]
+
+        gdf_buses_lookup = gpd.GeoDataFrame(
+            buses_for_lookup,
+            geometry=gpd.points_from_xy(buses_for_lookup['x'], buses_for_lookup['y']),
+            crs="EPSG:4326"
+        ).to_crs(nuts.crs)
+
+        # === Combine Interest-Busse und alle benötigten Busse ===
+        gdf_buses = pd.concat([gdf_buses_interest, gdf_buses_lookup])
+        gdf_buses = gdf_buses[~gdf_buses.index.duplicated(keep='first')]
+
+        # === Jittering nur für Interest-Busse anwenden ===
+        gdf_buses = apply_jitter_to_duplicate_buses(gdf_buses, epsg_m=3857, jitter_radius=500)
+
+    else:
+        # === vollständiges Netz laden ===
+        links = network.links.copy()
+        lines = network.lines.copy()
+        buses = network.buses.copy()
+        buses["name"] = buses.index
+        gdf_buses = gpd.GeoDataFrame(
+            buses,
+            geometry=gpd.points_from_xy(buses['x'], buses['y']),
+            crs="EPSG:4326"
+        ).to_crs(nuts.crs)
+
+    # === Lookup für Buskoordinaten + Carrier ===
     bus_lookup = gdf_buses.set_index('name')[['geometry', 'carrier']]
 
-    # Farbdefinitionen
-    carriers = gdf_buses['carrier'].unique()
-    colors = ["red", "blue", "green", "orange", "purple", "brown", "darkblue", "black", "cadetblue", "deepskyblue"]
-    carrier_color_map = {carrier: colors[i % len(colors)] for i, carrier in enumerate(carriers)}
-
-    # Farbskala für s_max_pu
-    norm = mcolors.Normalize(vmin=lines['s_max_pu'].min(), vmax=lines['s_max_pu'].max())
+    # === Farbskala für Linienintensität (basierend auf dem vollständigen Netz) ===
+    vmin = network.lines['s_max_pu'].min()
+    vmax = network.lines['s_max_pu'].max()
+    norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
     cmap = cm.get_cmap('viridis')
-    def s_max_pu_to_hex(s): return mcolors.to_hex(cmap(norm(s)))
 
-    # Karte erstellen
+    def s_max_pu_to_hex(s):
+        rgba = cmap(norm(s))
+        return mcolors.to_hex(rgba)
+
+    # === Karte initialisieren ===
     m = folium.Map(location=[gdf_buses.geometry.y.mean(), gdf_buses.geometry.x.mean()], zoom_start=7)
 
-    # GeoJSON hinzufügen
+    # === NUTS-3-Grenzen hinzufügen ===
     folium.GeoJson(
-        gdf_countries,
+        nuts,
         name="NUTS-3 Regions",
         tooltip=folium.GeoJsonTooltip(fields=["NUTS_NAME"], aliases=["Region: "]),
         style_function=lambda x: {"fillColor": "gray", "color": "black", "weight": 1, "fillOpacity": 0.2}
     ).add_to(m)
 
-    # Busse plotten
+    # === Farbzuordnung für Carrier ===
+    carriers_buses = gdf_buses['carrier'].unique()
+    carrier_color_map_buses, legend_order_buses = get_carrier_color_map(carriers_buses)
+
+    carriers_links = links['carrier'].unique()
+    carrier_color_map_links, legend_order_links = get_link_carrier_color_map(carriers_links)
+
+    # === Busse plotten ===
     for _, row in gdf_buses.iterrows():
-        color = carrier_color_map[row['carrier']]
+        color = carrier_color_map_buses.get(row['carrier'], "gray")
         popup_text = f"<b>Bus:</b> {row['name']}<br><b>Carrier:</b> {row['carrier']}"
         tooltip_text = f"{row['name']} ({row['carrier']})"
         folium.CircleMarker(
@@ -497,15 +540,16 @@ def create_buses_links_lines_map(etrago):
             tooltip=tooltip_text
         ).add_to(m)
 
-    # Links plotten
+    # === Links plotten ===
     for _, row in links.iterrows():
         try:
-            p0 = bus_lookup.loc[row['bus0'], 'geometry']
-            p1 = bus_lookup.loc[row['bus1'], 'geometry']
-            carrier = bus_lookup.loc[row['bus0'], 'carrier']
-            color = carrier_color_map.get(carrier, "gray")
+            point0 = bus_lookup.loc[row['bus0'], 'geometry']
+            point1 = bus_lookup.loc[row['bus1'], 'geometry']
+            carrier = row['carrier']
+            color = carrier_color_map_links.get(carrier, "gray")
+
             folium.PolyLine(
-                locations=[[p0.y, p0.x], [p1.y, p1.x]],
+                locations=[[point0.y, point0.x], [point1.y, point1.x]],
                 color=color,
                 weight=linkwidth,
                 opacity=0.8,
@@ -514,12 +558,13 @@ def create_buses_links_lines_map(etrago):
         except KeyError:
             continue
 
-    # Lines plotten
+    # === Lines plotten (farblich nach s_max_pu) ===
     for _, row in lines.iterrows():
         try:
             p0 = bus_lookup.loc[row['bus0'], 'geometry']
             p1 = bus_lookup.loc[row['bus1'], 'geometry']
             color = s_max_pu_to_hex(row['s_max_pu'])
+
             folium.PolyLine(
                 locations=[[p0.y, p0.x], [p1.y, p1.x]],
                 color=color,
@@ -530,43 +575,45 @@ def create_buses_links_lines_map(etrago):
         except KeyError:
             continue
 
-    # Legende: Carrier
-    legend_html = """
-    <div style="position: fixed; bottom: 30px; left: 30px; width: 200px; height: auto;
-         background-color: white; border:2px solid grey; z-index:9999; font-size:14px;
-         padding: 10px;">
-    <b>Carrier Legende</b><br>
-    """
-    for carrier, color in carrier_color_map.items():
-        legend_html += f'<i style="background:{color};width:12px;height:12px;float:left;margin-right:8px;display:inline-block;"></i>{carrier}<br>'
-    legend_html += '</div>'
-    m.get_root().html.add_child(folium.Element(legend_html))
+    # === LayerControl + getrennte Legenden ===
+    folium.LayerControl().add_to(m)
 
-    # Farbbalken für s_max_pu erzeugen
+    add_carrier_legend_to_map(m, carrier_color_map_buses, legend_order_buses, position="bottomleft", title="Bus-Carrier")
+    add_carrier_legend_to_map(m, carrier_color_map_links, legend_order_links, position="bottomright", title="Link-Carrier")
+
+    # === Farblegende für s_max_pu ===
     fig, ax = plt.subplots(figsize=(4, 0.4))
     fig.subplots_adjust(bottom=0.5)
     cb1 = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), cax=ax, orientation='horizontal')
     cb1.set_label('s_max_pu')
+
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight')
     img.seek(0)
     img_b64 = b64encode(img.read()).decode()
 
-    colorbar_html = f"""
-    <div style="position: fixed; bottom: 30px; left: 250px; width: 300px; height: auto;
+    legend_html = f"""
+    <div style="position: fixed;
+         bottom: 30px; left: 300px; width: 300px; height: auto;
          background-color: white; border:2px solid grey; z-index:9999; font-size:14px;
          padding: 10px;">
     <b>Lines: s_max_pu</b><br>
     <img src="data:image/png;base64,{img_b64}" style="width:100%;"/>
     </div>
     """
-    m.get_root().html.add_child(folium.Element(colorbar_html))
+    m.get_root().html.add_child(folium.Element(legend_html))
 
-    # --- Karte speichern ---
+    # === save map ===
     area = args["interest_area"]
     directory = f"maps/maps_{area}"
     os.makedirs(directory, exist_ok=True)
-    output_file = os.path.join(directory, f"buses_links_lines_map_{area}.html")
+
+    if args["plot_settings"]["plot_comps_of_interest"]:
+        directory = f"{directory}/plot_of_interest"
+        os.makedirs(directory, exist_ok=True)
+        output_file = os.path.join(directory, f"buses_links_lines_interest_map_{area}.html")
+    else:
+        output_file = os.path.join(directory, f"buses_links_lines_map_{area}.html")
 
     m.save(output_file)
     print(f"✅ Interaktive Komplett-Karte gespeichert unter: {output_file}")
