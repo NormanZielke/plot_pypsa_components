@@ -11,13 +11,14 @@ from plot_comps import (
     find_interest_buses,
     find_links_connected_to_buses
 )
+from calc_results import (
+    capacities_opt,
+    capacities_opt_techs_global
+)
 
 logger = logging.getLogger(__name__)
 
 class Etrago1:
-    """
-    Erweiterte PyPSA-Netzklasse für Visualisierung, ähnlich wie Etrago.
-    """
 
     def __init__(self, args, csv_folder=None):
         self.args = args
@@ -42,3 +43,7 @@ class Etrago1:
     find_interest_buses = find_interest_buses
 
     find_links_connected_to_buses = find_links_connected_to_buses
+
+    capacities_opt = capacities_opt
+
+    capacities_opt_techs_global = capacities_opt_techs_global
