@@ -95,8 +95,6 @@ plot_capacity_bar_multiple(df_capacities_opt_charger, filename= "CH4_Vergleich_c
 plot_capacity_bar_multiple(df_capacities_opt_bat, filename= "CH4_Vergleich_bat")
 
 
-
-
 # Electrolyser - sensitivity
 
 # capacities_opt EL  *=2
