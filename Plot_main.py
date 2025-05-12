@@ -63,6 +63,8 @@ capacities_opt1, capacities_ing_opt1 = etrago.capacities_opt()
 
 df_capacities_opt_H21, df_capacities_opt_stores1, df_capacities_opt_charger1, df_capacities_opt_bat1 = capacities_opt_techs_global(capacities_opt1)
 
+print(capacities_ing_opt1)
+
 #print(df_capacities_opt_H2)
 #print(df_capacities_opt_stores)
 #print(df_capacities_opt_charger)

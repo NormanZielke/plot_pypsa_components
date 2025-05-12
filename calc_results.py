@@ -61,25 +61,31 @@ def capacities_opt(etrago,scn = "Base_scn"):
 def capacities_opt_techs_global(capacities_opt):
 
     # Technologies
-    H2_techs = ["CH4_to_H2", "H2_to_CH4", "H2_to_power", "power_to_H2"]
-    stores_tech = ["central_heat_store", "rural_heat_store", "H2_overground", "H2_underground"]
+    H2_techs_1 = ["H2_to_CH4", "H2_to_power"]
+    H2_techs_2 = ["power_to_H2", "CH4_to_H2"]
+    stores_tech_1 = ["central_heat_store"]
+    stores_tech_2 = ["rural_heat_store", "H2_overground", "H2_underground"]
     charger = ["central_heat_store_charger", "central_heat_store_discharger", "rural_heat_store_charger",
                "rural_heat_store_discharger"]
     storage_u = ["battery"]
 
     df_capacities_opt = pd.DataFrame(capacities_opt)
 
-    df_capacities_opt_H2 = df_capacities_opt.loc[df_capacities_opt.index.isin(H2_techs)]
-    df_capacities_opt_stores = df_capacities_opt.loc[df_capacities_opt.index.isin(stores_tech)]
+    df_capacities_opt_H2_1 = df_capacities_opt.loc[df_capacities_opt.index.isin(H2_techs_1)]
+    df_capacities_opt_H2_2 = df_capacities_opt.loc[df_capacities_opt.index.isin(H2_techs_2)]
+    df_capacities_opt_stores_1 = df_capacities_opt.loc[df_capacities_opt.index.isin(stores_tech_1)]
+    df_capacities_opt_stores_2 = df_capacities_opt.loc[df_capacities_opt.index.isin(stores_tech_2)]
     df_capacities_opt_charger = df_capacities_opt.loc[df_capacities_opt.index.isin(charger)]
     df_capacities_opt_bat = df_capacities_opt.loc[df_capacities_opt.index.isin(storage_u)]
 
-    return (df_capacities_opt_H2,
-            df_capacities_opt_stores,
+    return (df_capacities_opt_H2_1,
+            df_capacities_opt_H2_2,
+            df_capacities_opt_stores_1,
+            df_capacities_opt_stores_2,
             df_capacities_opt_charger,
             df_capacities_opt_bat)
 
-def plot_capacity_bar_multiple(df, filename="capacity_comparison", bar_width=0.2, sort=True,
+def plot_capacity_bar_multiple(df, filename="capacity_comparison", bar_width=0.1, sort=True,
                                 title="Optimierte Kapazitäten je Komponente",
                                 ylabel="Capacity [MW or MWh]",
                                 folder="plots", dpi=300):
