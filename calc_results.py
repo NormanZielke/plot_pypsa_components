@@ -85,7 +85,7 @@ def capacities_opt_techs_global(capacities_opt):
             df_capacities_opt_charger,
             df_capacities_opt_bat)
 
-def plot_capacity_bar_multiple(df, filename="capacity_comparison", bar_width=0.1, sort=True,
+def plot_capacity_bar_multiple(df, filename="capacity_comparison", bar_width=0.15, sort=False,
                                 title="Optimierte Kapazitäten je Komponente",
                                 ylabel="Capacity [MW or MWh]",
                                 folder="plots", dpi=300):
@@ -120,7 +120,7 @@ def plot_capacity_bar_multiple(df, filename="capacity_comparison", bar_width=0.1
     carriers = df.index
     x = np.arange(len(carriers))  # Positionen der carrier auf x-Achse
 
-    fig, ax = plt.subplots(figsize=(14, 6))
+    fig, ax = plt.subplots(figsize=(6, 8))
 
     # Farben aus colormap
     cmap = plt.get_cmap("tab10")
@@ -136,7 +136,7 @@ def plot_capacity_bar_multiple(df, filename="capacity_comparison", bar_width=0.1
     ax.set_title(title)
     ax.set_xticks(x)
     ax.set_xticklabels(carriers, rotation=45, ha='right')
-    ax.legend(title="Szenario")
+    ax.legend(title="Szenario", loc="lower right")
 
     plt.tight_layout()
     plt.grid(axis='y', linestyle='--', alpha=0.7)
