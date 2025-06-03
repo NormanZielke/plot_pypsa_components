@@ -19,7 +19,7 @@ args = {
 
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
     # copied from etrago
-    "interest_area" : "Ingolstadt",
+    "interest_area" : ["Ingolstadt"],
     "network_clustering": {
         "n_clusters_AC": 30,
         "n_clusters_gas": 14,

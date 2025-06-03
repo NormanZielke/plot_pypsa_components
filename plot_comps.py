@@ -625,37 +625,51 @@ def create_maps(etrago):
     create_buses_and_links_map(etrago)
     create_buses_links_lines_map(etrago)
 
+
 def find_interest_buses(etrago):
-    network = etrago.network
+    """
+    Identifiziere alle Busse innerhalb von Regionen, deren Name
+    in args["interest_area"] als Teilstring vorkommt.
+
+    args["interest_area"] ist eine Liste von Namensfragmenten.
+    """
+    n = etrago.network.copy()
     args = etrago.args
 
-    # NUTS-3 Shapefile laden
-    nuts_3_map = args["nuts_3_map"]
-    nuts = gpd.read_file(nuts_3_map)
+    # GeoJSON einlesen
+    nuts = gpd.read_file(args["nuts_3_map"])
+    nuts["NUTS_NAME"] = nuts["NUTS_NAME"].str.strip()
 
-    # select interest area
-    interest_area = nuts[nuts["NUTS_NAME"].str.contains(args["interest_area"], case=False)]
+    # Matchen über str.contains für alle Einträge in args["interest_area"]
+    area_filter = args["interest_area"]
+    mask = nuts["NUTS_NAME"].apply(lambda name: any(area.lower() in name.lower() for area in area_filter))
+    interest_area = nuts[mask]
 
-    # Busse in GeoDataFrame umwandeln
-    bus_gdf = gpd.GeoDataFrame(
-        network.buses.copy(),
-        geometry=gpd.points_from_xy(network.buses.x, network.buses.y),
+    if interest_area.empty:
+        raise ValueError(f"Keine Region mit Teilstrings {area_filter} in GeoJSON gefunden.")
+
+    # Busse zu GeoDataFrame
+    buses = gpd.GeoDataFrame(
+        n.buses.copy(),
+        geometry=gpd.points_from_xy(n.buses.x, n.buses.y),
         crs="EPSG:4326"
     )
 
     # index als Spalte speichern
-    bus_gdf["name"] = bus_gdf.index
+    buses["name"] = buses.index
 
-    # transform bus_gdf into CRS of the NUTS-3 map
-    bus_gdf = bus_gdf.to_crs(nuts.crs)
+    # CRS-Anpassung
+    buses = buses.to_crs(interest_area.crs)
 
-    # select buses in interest area
-    buses_interest_area = bus_gdf[bus_gdf.geometry.within(interest_area.union_all())]
+    # Leere Geometrien ausschließen
+    interest_area = interest_area[~interest_area.geometry.is_empty & interest_area.geometry.notnull()]
 
-    # === 6. Ergebnis: Liste der Busnamen ===
-    #bus_list = buses_interest_area.index.tolist()
+    # Räumlicher Schnitt
+    buses_in_area = buses[buses.geometry.within(interest_area.unary_union)]
 
-    return buses_interest_area
+    # print(f"{len(buses_in_area)} Busse in {area_filter} gefunden.")
+
+    return buses_in_area
 
 def find_links_connected_to_buses(etrago):
     network = etrago.network
