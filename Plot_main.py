@@ -15,11 +15,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 args = {
     # == INPUT ==
-    "pypsa_network":"pypsa_results/2025-04-18_etrago_test_set4_appl.log", # path to pypsa results
-    "pypsa_network2":"pypsa_results/2025-05-03_etrago_test_set6_CH4_100", # path to pypsa results
-    "pypsa_network3":"pypsa_results/2025-05-03_etrago_test_set8_CH4_150", # path to pypsa results
-    "pypsa_network4":"pypsa_results/2025-05-03_etrago_test_set8_EL_mul_2", # path to pypsa results
-    "pypsa_network5":"pypsa_results/2025-05-04_etrago_test_set9_EL_mul_3", # path to pypsa results
+    "pypsa_network":"pypsa_results/set27/01 - 2025-05-26_set27_tol_-9_1_cluster_Ing", # path to pypsa results
 
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
     # copied from etrago
@@ -39,13 +35,10 @@ args = {
 }
 
 etrago = Etrago1(args, csv_folder = args["pypsa_network"])
-etrago2 = Etrago1(args, csv_folder = args["pypsa_network2"])
-etrago3 = Etrago1(args, csv_folder = args["pypsa_network3"])
-etrago4 = Etrago1(args, csv_folder = args["pypsa_network4"])
-etrago5 = Etrago1(args, csv_folder = args["pypsa_network5"])
+
 
 # === create maps ===
-#etrago.create_maps()
+etrago.create_maps()
 #etrago.create_bus_map()
 #etrago.create_links_map()
 #etrago.create_lines_map()

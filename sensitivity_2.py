@@ -12,19 +12,19 @@ logger = logging.getLogger(__name__)
 
 # === USER INPUT ===
 args = {
-    "scenario_folder": "pypsa_results/Toleranzen",  # Ordner mit PyPSA-Szenarien
+    "scenario_folder": "pypsa_results/set27",  # Ordner mit PyPSA-Szenarien
 
     #"scenario_labels": ["EL*0.5","EL*0.75","base","EL*2","EL*3"],
     #"scenario_labels": ["base","CH4_100","CH4_150"],
     #scenario_labels": ["SMR*0.5","SMR*0.75","base","SMR*2","SMR*3"],
     #"scenario_labels": ["Batterie*0.5","Batterie*0.75","base","Batterie*2","Batterie*3"],  Legendenbeschriftung im Plot
-    "scenario_labels": ["base","10⁻⁷","10⁻⁹"],
+    "scenario_labels": ["base_1", "base"],
 
     #"plot_label": "EL_Vergleich",  # Präfix für Plot-Dateien
     #"plot_label": "CH4_Vergleich",
     #"plot_label": "SMR_Vergleich",
     #"plot_label": "Batterie_Vergleich",
-    "plot_label": "Toleranzen_Vergleich",
+    "plot_label": "Base_Vergleich",
 
     "nuts_3_map": "germany-de-nuts-3-regions.geojson",
     "interest_area": "Ingolstadt",
