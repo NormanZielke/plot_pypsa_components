@@ -16,6 +16,13 @@ from calc_results import (
     capacities_opt_techs_global
 )
 
+from plot_base_results import (
+    plot_capacity_bar,
+    plot_electricity_generation_bar,
+    plot_central_heat_generation_bar,
+    plot_decentral_heat_generation_bar,
+)
+
 logger = logging.getLogger(__name__)
 
 class Etrago1:
@@ -47,3 +54,11 @@ class Etrago1:
     capacities_opt = capacities_opt
 
     capacities_opt_techs_global = capacities_opt_techs_global
+
+    plot_capacity_bar = plot_capacity_bar
+
+    plot_electricity_generation_bar = plot_electricity_generation_bar
+
+    plot_central_heat_generation_bar = plot_central_heat_generation_bar
+
+    plot_decentral_heat_generation_bar = plot_decentral_heat_generation_bar

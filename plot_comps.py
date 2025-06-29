@@ -666,6 +666,7 @@ def find_interest_buses(etrago):
 
     # Räumlicher Schnitt
     buses_in_area = buses[buses.geometry.within(interest_area.unary_union)]
+    #buses_in_area = buses[buses.geometry.within(interest_area.buffer(0.005).unary_union)]
 
     # print(f"{len(buses_in_area)} Busse in {area_filter} gefunden.")
 
