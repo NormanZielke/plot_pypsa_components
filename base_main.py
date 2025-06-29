@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 args = {
     # == INPUT ==
     "pypsa_network":"pypsa_results/Base_1/2025-06-28_set35_base1", # path to pypsa results
+    "results_folder":"Base_results/Base_1",
 
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
     # copied from etrago
@@ -37,24 +38,24 @@ def calc_base_results(args):
     etrago.plot_capacity_bar(
         title="Optimierte Kapaziäten mit vorhandenen Kapazitäten",
         filename="capacity_bar.png",
-        output_folder="Base_results"
+        output_folder=args["results_folder"]
     )
     etrago.plot_electricity_generation_bar(
-        title="Stromerzeugung je Technologie",
+        title="Stromerversorgung je Technologie",
         filename="generation_bar.png",
-        output_folder="Base_results"
+        output_folder=args["results_folder"]
     )
 
     etrago.plot_central_heat_generation_bar(
         title="Zentrale Wärmerversorgung je Technologie",
         filename="central_heat_generation_bar.png",
-        output_folder="Base_results"
+        output_folder=args["results_folder"]
     )
 
     etrago.plot_decentral_heat_generation_bar(
         title="dezentrale Wärmerversorgung je Technologie",
         filename="decentral_heat_generation_bar.png",
-        output_folder="Base_results"
+        output_folder=args["results_folder"]
     )
 
     return etrago

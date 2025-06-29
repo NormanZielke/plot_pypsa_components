@@ -72,7 +72,7 @@ def capacities_opt_ing(self):
 
 def df_electricity_generation(etrago):
     """
-    Returns electricity generation and import by carrier.
+    Returns electricity generation and import by carrier (links, generators, batteries, lines).
 
     Parameters
     ----------
@@ -109,11 +109,13 @@ def df_electricity_generation(etrago):
     links_cap_elec = links_cap[
         links_cap.bus1.isin(bus_AC_id)
     ]
+
     links_dispatch = (
         etrago.network.links_t.p1[links_cap_elec.index]
         .sum(axis=0)
         * (-1)
     )
+
     df_links = pd.DataFrame({
         "carrier": links_cap_elec.carrier,
         "generation": links_dispatch
@@ -128,13 +130,30 @@ def df_electricity_generation(etrago):
         (gens_all.carrier != "load shedding") &
         (gens_all.p_nom_extendable == True)
     ]
+
     gens_dispatch = (
         etrago.network.generators_t.p[gens_elec.index]
         .sum(axis=0)
     )
+
     df_gens = pd.DataFrame({
         "carrier": gens_elec.carrier,
         "generation": gens_dispatch
+    })
+
+    # Batteries (discharge)
+    batteries_ing = etrago.network.storage_units[
+        etrago.network.storage_units.bus.isin(bus_list)
+    ]
+    batteries_list = batteries_ing.index.to_list()
+    battery_dispatch = etrago.network.storage_units_t.p.loc[:, batteries_list]
+    battery_generation = battery_dispatch[
+        battery_dispatch[batteries_list] > 0
+    ].sum()
+
+    df_battery = pd.DataFrame({
+        "carrier": ["battery_discharge"],
+        "generation": [battery_generation.sum()]
     })
 
     # Lines (electricity import)
@@ -156,7 +175,11 @@ def df_electricity_generation(etrago):
     })
 
     # Combine all sources
-    df_combined = pd.concat([df_links, df_gens, df_import], axis=0)
+    df_combined = pd.concat(
+        [df_links, df_gens, df_battery, df_import],
+        axis=0
+    )
+
     df_grouped = (
         df_combined
         .groupby("carrier")
@@ -227,7 +250,7 @@ def df_central_heat_generation(etrago):
 
 def df_decentral_heat_generation(etrago):
     """
-    Returns decentral heat generation by carrier.
+    Returns decentral heat generation by carrier (links + generators).
 
     Parameters
     ----------
@@ -242,31 +265,54 @@ def df_decentral_heat_generation(etrago):
 
     # Select relevant buses
     buses_ing = etrago.find_interest_buses()
-    bus_decentral_heat_id = buses_ing[buses_ing.carrier == "rural_heat"].index.to_list()
+    bus_rural_heat_id = buses_ing[buses_ing.carrier == "rural_heat"].index.to_list()
 
     # Links connected to decentral heat buses
     connected_links = etrago.find_links_connected_to_buses()
     links_dH = connected_links[
-        (connected_links.bus1.isin(bus_decentral_heat_id)) &
+        (connected_links.bus1.isin(bus_rural_heat_id)) &
         (connected_links.p_nom_extendable == True)
     ]
 
-    # Dispatch sum
+    # Dispatch Links
     links_dispatch = (
         etrago.network.links_t.p1[links_dH.index]
         .sum(axis=0)
         * (-1)
     )
 
-    # Build DataFrame
-    df_heat = pd.DataFrame({
+    df_links = pd.DataFrame({
         "carrier": links_dH.carrier,
         "generation_dH": links_dispatch
     })
 
+    # Generators connected to decentral heat buses
+    gens_all = etrago.network.generators[
+        etrago.network.generators.bus.isin(bus_rural_heat_id)
+    ]
+
+    gens_dH = gens_all[
+        (gens_all.carrier != "load shedding") &
+        (gens_all.p_nom_extendable == True)
+    ]
+
+    # Dispatch Generators
+    gens_dispatch = (
+        etrago.network.generators_t.p[gens_dH.index]
+        .sum(axis=0)
+    )
+
+    df_gens = pd.DataFrame({
+        "carrier": gens_dH.carrier,
+        "generation_dH": gens_dispatch
+    })
+
+    # Combine Links + Generators
+    df_combined = pd.concat([df_links, df_gens], axis=0)
+
     # Group by carrier
     df_grouped = (
-        df_heat
+        df_combined
         .groupby("carrier")
         .sum()
         .reset_index()
