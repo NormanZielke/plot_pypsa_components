@@ -13,8 +13,12 @@ logger = logging.getLogger(__name__)
 
 args = {
     # == INPUT ==
+    # Base 1
     "pypsa_network":"pypsa_results/Base_1/2025-06-28_set35_base1", # path to pypsa results
-    "results_folder":"Base_results/Base_1",
+    "results_folder":"results/Base_results/Base_1",
+    # Base 3 -> CO2 - neutral ohne electric boiler
+    #"pypsa_network":"pypsa_results/Base_3/2025-06-29_base_3", # path to pypsa results
+    #"results_folder":"results/Base_results/Base_3",
 
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
     # copied from etrago
