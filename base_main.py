@@ -13,10 +13,12 @@ logger = logging.getLogger(__name__)
 
 args = {
     # == INPUT ==
-    "pypsa_network":"pypsa_results/Base_1_2025-07-05/2025-07-05_base1", # path to pypsa results
-    "results_folder":"results/Base_results/Base1",
+    "pypsa_network":"etrago_results/Base_scenarios/Base_scenario_1_test_2025-07-08", # path to pypsa results
+    "results_folder":"results/Base_scenarios/Base_scenario_1_test_2025-07-08",
 
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
+
+    "time_horizon": slice("2011-01-15", "2011-02-15") , # define time horizon for timeseries plots
     # copied from etrago
     "interest_area" : ["Ingolstadt"],
     "network_clustering": {
@@ -55,6 +57,13 @@ def calc_base_results(args):
     etrago.plot_decentral_heat_generation_bar(
         title="dezentrale Wärmerversorgung je Technologie",
         filename="decentral_heat_generation_bar.png",
+        output_folder=args["results_folder"]
+    )
+
+    etrago.plot_central_heat_dispatch(
+        time=args["time_horizon"],
+        title="Dispatch Central Heat und Wärmeerzeuger",
+        filename="central_heat_dispatch.png",
         output_folder=args["results_folder"]
     )
 

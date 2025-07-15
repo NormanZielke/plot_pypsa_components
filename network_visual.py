@@ -21,6 +21,7 @@ from plot_base_results import (
     plot_electricity_generation_bar,
     plot_central_heat_generation_bar,
     plot_decentral_heat_generation_bar,
+    plot_central_heat_dispatch
 )
 
 logger = logging.getLogger(__name__)
@@ -62,3 +63,5 @@ class Etrago1:
     plot_central_heat_generation_bar = plot_central_heat_generation_bar
 
     plot_decentral_heat_generation_bar = plot_decentral_heat_generation_bar
+
+    plot_central_heat_dispatch = plot_central_heat_dispatch

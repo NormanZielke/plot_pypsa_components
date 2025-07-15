@@ -25,9 +25,9 @@ args = {
     #"results_folder": "results/Sensitivity_results/CH4_sensitivity", # Directory where results will be saved
     #"labels":[ "CH4 = 20 €/MWh","Base - CH4 = 41 €/MWh", "CH4 = 60 €/MWh", "CH4 = 80 €/MWh", "CH4 = 100 €/MWh"], # legend entries
     # CO2 - sensitivity
-    "pypsa_networks": "etrago_results/Parameter_set_new/",  # Directory which contains results-folder
-    "results_folder": "results/Sensitivity_results/Base_vergleich_new",  # Directory where results will be saved
-    "labels": ["Base_1","Base_1a","Base_3c","Base_3d"],
+    "pypsa_networks": "etrago_results/Base_1_lösungen",  # Directory which contains results-folder
+    "results_folder": "results/Sensitivity_results/Base_1_vergleich",  # Directory where results will be saved
+    "labels": ["Base_1","Base_1a","Base_1b"],
     # legend entries
 
     "nuts_3_map": "germany-de-nuts-3-regions.geojson",

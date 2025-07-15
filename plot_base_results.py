@@ -265,4 +265,93 @@ def plot_decentral_heat_generation_bar(
     print(f"Plot successfully saved to: {save_path}")
 
 
+def plot_central_heat_dispatch(
+    etrago,
+    time=None,
+    title="Dispatch Central Heat und Wärmeerzeuger",
+    filename="central_heat_dispatch.png",
+    output_folder="Base_results"
+):
+    """
+    Plots central heat dispatch by carrier in the interest area as stacked area plot
+    and overlays the central heat load as a black line.
+
+    Args:
+        etrago: Etrago instance with loaded PyPSA network
+        time (str or slice, optional): Time slice for plotting (e.g. '2015-07') or slice("2011-05-01", "2011-05-31")
+        title (str, optional): Title of the plot
+        filename (str, optional): Filename for saving the plot
+        output_folder (str, optional): Output folder for saving the file
+    """
+    # get buses of interest area
+    buses_interest = etrago.find_interest_buses()
+    bus_list = buses_interest.index.to_list()
+
+    # get load time series of interest area
+    loads_interest = etrago.network.loads[etrago.network.loads.bus.isin(bus_list)]
+    loads_int_ts = etrago.network.loads_t.p_set.loc[:, loads_interest.index]
+
+    # get bus id of central heat buses
+    cH_index = buses_interest[buses_interest.carrier == "central_heat"].index
+
+    # get links connected to central heat buses
+    connected_links = etrago.find_links_connected_to_buses()
+    links_on_cH = connected_links[
+        ((connected_links.bus1.isin(cH_index)) & (connected_links.p_nom_extendable == True)) |
+        (connected_links.carrier == "central_waste_CHP_heat")
+    ]
+
+    # get dispatch time series of relevant links
+    links_on_cH_ts = etrago.network.links_t.p1[links_on_cH.index] * (-1)
+
+    # filter by time range
+    if time is not None:
+        loads_int_ts = loads_int_ts.loc[time]
+        links_on_cH_ts = links_on_cH_ts.loc[time]
+
+    # map carriers to link IDs
+    link_id_to_carrier = links_on_cH["carrier"].to_dict()
+    carrier_series = pd.Series(link_id_to_carrier)
+
+    # group links by carrier and sum
+    links_on_cH_ts = links_on_cH_ts.T
+    carrier_grouped_T = links_on_cH_ts.groupby(carrier_series).sum()
+    carrier_grouped = carrier_grouped_T.T
+
+    # remove carriers with zero dispatch
+    nonzero_carriers = carrier_grouped.columns[(carrier_grouped != 0).any()]
+    carrier_grouped = carrier_grouped[nonzero_carriers]
+
+    # get central heat load time series
+    selected_columns = [col for col in loads_int_ts.columns if str(col).endswith("central_heat")]
+    if not selected_columns:
+        raise ValueError("No 'central_heat' column found in load time series.")
+    column_to_plot = selected_columns[0]
+    central_heat_ts = loads_int_ts[column_to_plot]
+
+    # align index and fill gaps
+    central_heat_ts = central_heat_ts.reindex(carrier_grouped.index).fillna(0)
+
+    # create plot
+    fig, ax = plt.subplots(figsize=(14, 7))
+    carrier_grouped.plot.area(ax=ax, linewidth=0, alpha=0.6)
+    central_heat_ts.plot(ax=ax, color="black", linewidth=2, label="Central Heat Load")
+
+    ax.set_xlabel("Datum")
+    ax.set_ylabel("Leistung / Wärmefluss [MW]")
+    ax.set_title(title)
+    ax.legend(title="Carrier / Load")
+    ax.grid(True)
+    plt.tight_layout()
+
+    # save figure
+    os.makedirs(output_folder, exist_ok=True)
+    filepath = os.path.join(output_folder, filename)
+    plt.savefig(filepath, dpi=300)
+    plt.close()
+
+    print(f"Plot erfolgreich gespeichert unter: {filepath}")
+
+
+
 

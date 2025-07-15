@@ -26,9 +26,9 @@ def capacities_opt_ing(self):
     # filter for links capacities
     connected_links = self.find_links_connected_to_buses()
     waste_list = ["central_waste_CHP", "central_waste_CHP_heat"]
-    links_cap = connected_links[
-        (connected_links.p_nom_extendable == True) | (connected_links.carrier.isin(waste_list))
-        ]
+    #links_cap = connected_links[
+    #    (connected_links.p_nom_extendable == True) | (connected_links.carrier.isin(waste_list))
+    #    ]
     links_cap = connected_links[
         (connected_links.p_nom_extendable == True) |
         (connected_links.carrier.isin(waste_list))]
@@ -41,8 +41,8 @@ def capacities_opt_ing(self):
     ])
     ]
     df_caps = df_caps.reset_index(drop=True)
-    waste_index = df_caps[df_caps.carrier.isin(waste_list)].index
-    df_caps.loc[waste_index, "p_nom_opt"] = 0
+    #waste_index = df_caps[df_caps.carrier.isin(waste_list)].index
+    #df_caps.loc[waste_index, "p_nom_opt"] = 0
     df_caps = df_caps.rename(columns={"p_nom_opt": "Capacity"})
 
     # filter generators
