@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 
 args = {
     # == INPUT ==
-    "pypsa_network":"etrago_results/Base_scenarios/Base_scenario_1_test_2025-07-08", # path to pypsa results
-    "results_folder":"results/Base_scenarios/Base_scenario_1_test_2025-07-08",
+    "pypsa_network":"etrago_results/Base_scenarios/Base_Scenario_1a_2025-07-16", # path to pypsa results
+    "results_folder":"results/Base_scenarios/Base_Scenario_1a_2025-07-16",
 
     "nuts_3_map" : "germany-de-nuts-3-regions.geojson", # path to .geojson nuts-3 file
 
-    "time_horizon": slice("2011-01-15", "2011-02-15") , # define time horizon for timeseries plots
+    "time_horizon": slice("2011-10-01", "2011-12-31") , # define time horizon for timeseries plots (e.g. '2015-07') or slice("2011-05-01", "2011-05-31") #slice("2011-05-01", "2011-08-31")
     # copied from etrago
     "interest_area" : ["Ingolstadt"],
     "network_clustering": {

@@ -107,7 +107,7 @@ def create_links_map(etrago):
 
     if args["plot_settings"]["plot_comps_of_interest"]:
         # select buses and links of interest area
-        links = find_links_connected_to_buses(etrago)
+        links = find_links_connected_to_interest_buses(etrago)
         # Load all buses that appear in these links
         used_buses = set(links['bus0']) | set(links['bus1'])
 
@@ -331,7 +331,7 @@ def create_buses_and_links_map(etrago):
         gdf_buses_interest = find_interest_buses(etrago)
 
         # Left with at least one of these buses
-        links = find_links_connected_to_buses(etrago)
+        links = find_links_connected_to_interest_buses(etrago)
         linked_buses = set(links['bus0']) | set(links['bus1'])
 
         # ALL buses that appear in links (for coordinates/lookup)
@@ -454,7 +454,7 @@ def create_buses_links_lines_map(etrago):
         gdf_buses_interest = find_interest_buses(etrago)
 
         # === Links & Lines mit mindestens einem Bus in Region ===
-        links = find_links_connected_to_buses(etrago)
+        links = find_links_connected_to_interest_buses(etrago)
         lines = network.lines.copy()
         buses_interest_names = gdf_buses_interest.index.tolist()
         lines = lines[
@@ -672,7 +672,7 @@ def find_interest_buses(etrago):
 
     return buses_in_area
 
-def find_links_connected_to_buses(etrago):
+def find_links_connected_to_interest_buses(etrago):
     network = etrago.network
 
     # find buses in interst area

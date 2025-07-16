@@ -14,7 +14,7 @@ import pypsa
 
 from plot_comps import(
     find_interest_buses,
-    find_links_connected_to_buses
+    find_links_connected_to_interest_buses
 )
 
 #path_to_results = "pypsa_results/2025-04-18_etrago_test_set4_appl.log"
@@ -28,7 +28,7 @@ def capacities_opt(etrago,scn = "Base_scn"):
     links_opt_cap = links_opt.groupby("carrier")["p_nom_opt"].sum().rename(scn)
 
     # optimized links - interest
-    connected_links = find_links_connected_to_buses(etrago)
+    connected_links = find_links_connected_to_interest_buses(etrago)
     connected_links_optimized = connected_links[connected_links.p_nom_extendable == True]
     links_ing_opt_cap = connected_links_optimized.groupby("carrier")["p_nom_opt"].sum().rename(scn)
 

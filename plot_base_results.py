@@ -274,13 +274,13 @@ def plot_central_heat_dispatch(
 ):
     """
     Plots central heat dispatch by carrier in the interest area as stacked area plot
-    and overlays the central heat load as a black line.
+    and overlays the central heat load. Includes charging of heat storage units.
 
     Args:
         etrago: Etrago instance with loaded PyPSA network
         time (str or slice, optional): Time slice for plotting (e.g. '2015-07') or slice("2011-05-01", "2011-05-31")
         title (str, optional): Title of the plot
-        filename (str, optional): Filename for saving the plot
+        filename (str, optional): Filename for saving the plot (will be extended by time tag)
         output_folder (str, optional): Output folder for saving the file
     """
     # get buses of interest area
@@ -294,45 +294,60 @@ def plot_central_heat_dispatch(
     # get bus id of central heat buses
     cH_index = buses_interest[buses_interest.carrier == "central_heat"].index
 
-    # get links connected to central heat buses
-    connected_links = etrago.find_links_connected_to_buses()
+    # get links connected to interest buses
+    connected_links = etrago.find_links_connected_to_interest_buses()
+
+    # links that dispatch into central_heat network
     links_on_cH = connected_links[
         ((connected_links.bus1.isin(cH_index)) & (connected_links.p_nom_extendable == True)) |
         (connected_links.carrier == "central_waste_CHP_heat")
     ]
-
-    # get dispatch time series of relevant links
     links_on_cH_ts = etrago.network.links_t.p1[links_on_cH.index] * (-1)
 
-    # filter by time range
+    # links that charge from central_heat network (e.g. storage)
+    links_from_cH = connected_links[(connected_links.bus0.isin(cH_index))]
+    links_from_cH_ts = etrago.network.links_t.p0[links_from_cH.index] * (-1)
+
+    # apply time filter if given
     if time is not None:
         loads_int_ts = loads_int_ts.loc[time]
         links_on_cH_ts = links_on_cH_ts.loc[time]
+        links_from_cH_ts = links_from_cH_ts.loc[time]
 
-    # map carriers to link IDs
-    link_id_to_carrier = links_on_cH["carrier"].to_dict()
-    carrier_series = pd.Series(link_id_to_carrier)
+    # map carrier names
+    carriers_on_cH = pd.Series(links_on_cH["carrier"].to_dict())
+    carriers_from_cH = pd.Series(links_from_cH["carrier"].to_dict())
 
-    # group links by carrier and sum
-    links_on_cH_ts = links_on_cH_ts.T
-    carrier_grouped_T = links_on_cH_ts.groupby(carrier_series).sum()
-    carrier_grouped = carrier_grouped_T.T
+    # group dispatch and storage charging by carrier
+    grouped_on_cH = links_on_cH_ts.T.groupby(carriers_on_cH).sum().T
+    grouped_from_cH = links_from_cH_ts.T.groupby(carriers_from_cH).sum().T
 
-    # remove carriers with zero dispatch
+    # combine both sources
+    carrier_grouped = pd.concat([grouped_on_cH, grouped_from_cH], axis=1)
+
+    # remove carriers with no dispatch
     nonzero_carriers = carrier_grouped.columns[(carrier_grouped != 0).any()]
     carrier_grouped = carrier_grouped[nonzero_carriers]
 
-    # get central heat load time series
+    # get central_heat load
     selected_columns = [col for col in loads_int_ts.columns if str(col).endswith("central_heat")]
     if not selected_columns:
         raise ValueError("No 'central_heat' column found in load time series.")
     column_to_plot = selected_columns[0]
     central_heat_ts = loads_int_ts[column_to_plot]
-
-    # align index and fill gaps
     central_heat_ts = central_heat_ts.reindex(carrier_grouped.index).fillna(0)
 
-    # create plot
+    # extend filename with time info
+    if time is not None:
+        if isinstance(time, slice):
+            start = str(time.start)[:10] if time.start else "start"
+            end = str(time.stop)[:10] if time.stop else "end"
+            time_tag = f"{start}_to_{end}"
+        else:
+            time_tag = str(time).replace(" ", "_")
+        filename = filename.replace(".png", f"_{time_tag}.png")
+
+    # plot setup
     fig, ax = plt.subplots(figsize=(14, 7))
     carrier_grouped.plot.area(ax=ax, linewidth=0, alpha=0.6)
     central_heat_ts.plot(ax=ax, color="black", linewidth=2, label="Central Heat Load")
@@ -344,14 +359,13 @@ def plot_central_heat_dispatch(
     ax.grid(True)
     plt.tight_layout()
 
-    # save figure
+    # save plot
     os.makedirs(output_folder, exist_ok=True)
     filepath = os.path.join(output_folder, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
 
     print(f"Plot erfolgreich gespeichert unter: {filepath}")
-
 
 
 

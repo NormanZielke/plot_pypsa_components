@@ -9,7 +9,7 @@ from plot_comps import (
     create_buses_links_lines_map,
     create_maps,
     find_interest_buses,
-    find_links_connected_to_buses
+    find_links_connected_to_interest_buses
 )
 from calc_results import (
     capacities_opt,
@@ -50,7 +50,7 @@ class Etrago1:
 
     find_interest_buses = find_interest_buses
 
-    find_links_connected_to_buses = find_links_connected_to_buses
+    find_links_connected_to_interest_buses = find_links_connected_to_interest_buses
 
     capacities_opt = capacities_opt
 

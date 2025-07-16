@@ -15,7 +15,7 @@ plt.style.use('bmh')
 
 from plot_comps import(
     find_interest_buses,
-    find_links_connected_to_buses
+    find_links_connected_to_interest_buses
 )
 
 
@@ -24,7 +24,7 @@ def capacities_opt_ing(self):
     Filter Optimized Capacities fpr interest area
     """
     # filter for links capacities
-    connected_links = self.find_links_connected_to_buses()
+    connected_links = self.find_links_connected_to_interest_buses()
     waste_list = ["central_waste_CHP", "central_waste_CHP_heat"]
     #links_cap = connected_links[
     #    (connected_links.p_nom_extendable == True) | (connected_links.carrier.isin(waste_list))
@@ -91,7 +91,7 @@ def df_electricity_generation(etrago):
     bus_AC_id = buses_ing[buses_ing.carrier == "AC"].index.to_list()
 
     # Links (electricity)
-    connected_links = etrago.find_links_connected_to_buses()
+    connected_links = etrago.find_links_connected_to_interest_buses()
     waste_list = ["central_waste_CHP", "central_waste_CHP_heat"]
 
     links_cap = connected_links[
@@ -211,7 +211,7 @@ def df_central_heat_generation(etrago):
     bus_central_heat_id = buses_ing[buses_ing.carrier == "central_heat"].index.to_list()
 
     # Links connected to central heat buses
-    connected_links = etrago.find_links_connected_to_buses()
+    connected_links = etrago.find_links_connected_to_interest_buses()
     links_cap = connected_links[
         connected_links.bus1.isin(bus_central_heat_id)
     ]
@@ -268,7 +268,7 @@ def df_decentral_heat_generation(etrago):
     bus_rural_heat_id = buses_ing[buses_ing.carrier == "rural_heat"].index.to_list()
 
     # Links connected to decentral heat buses
-    connected_links = etrago.find_links_connected_to_buses()
+    connected_links = etrago.find_links_connected_to_interest_buses()
     links_dH = connected_links[
         (connected_links.bus1.isin(bus_rural_heat_id)) &
         (connected_links.p_nom_extendable == True)
